@@ -33,6 +33,6 @@ module load foss/2018b R/3.5.1
 function=$1
 output="$output_dir"/${JOB_NAME}_${function}_${JOB_ID}_$SGE_TASK_ID.rds
 
-Rscript "$HOME"/lagged/Eve_test_assumptions.R \
+Rscript "$HOME"/lagged_buffering/simulations/Eve_test_assumptions.R \
 --function="$function" \
 "$output"

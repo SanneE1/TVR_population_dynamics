@@ -37,7 +37,7 @@ output <- cli$args[1]
 foption
 taskID
 
-source("/home/evers/lagged/ipmr_functions.R")
+source("/home/evers/lagged_buffering/analysis/simulations/ipmr_functions.R")
 
 ## load models -------------------------------------------------------------------------
 survC <- readRDS("/data/gsclim/ipmr_lagged_test/HEQU_s_climate.rds")
