@@ -76,25 +76,27 @@ params_list <- list(
   fd_sd = 0.8747764
 )
 
-clim_sd <- as.list(rep(seq(from = 0, to = 2, length.out = 16), 20))
+clim_sd <- rep(seq(from = 0, to = 2, length.out = 16), 60)
+clim_corr <- rep(rep(c(-0.9,0,0.9), each = 16), 20)
+
 
 if(foption == "P_1yr") {
-  lambda <- P_1yr(clim_sd[[taskID]])
+  lambda <- P_1yr(n_it = 10000, clim_sd = clim_sd[taskID], clim_corr = clim_corr[taskID])
 } 
 if(foption == "P_2yr") {
-  lambda <- P_2yr(clim_sd[[taskID]])
+  lambda <- P_2yr(n_it = 10000, clim_sd = clim_sd[taskID], clim_corr = clim_corr[taskID])
 } 
 if(foption == "P_neg_1yr"){
-  lambda <- P_neg_1yr(clim_sd[[taskID]])
+  lambda <- P_neg_1yr(n_it = 10000, clim_sd = clim_sd[taskID], clim_corr = clim_corr[taskID])
 }
 if(foption == "PF_1yr") {
-  lambda <- PF_1yr(clim_sd[[taskID]])
+  lambda <- PF_1yr(n_it = 10000, clim_sd = clim_sd[taskID], clim_corr = clim_corr[taskID])
 }
 if(foption == "PF_neg_1yr") {
-  lambda <- PF_neg_1yr(clim_sd[[taskID]])
+  lambda <- PF_neg_1yr(n_it = 10000, clim_sd = clim_sd[taskID], clim_corr = clim_corr[taskID])
 }
 
-lambda
+
 
 saveRDS(lambda, file = output)
 
