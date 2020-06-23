@@ -221,7 +221,6 @@ P_1yr <- function(n_it, clim_sd, clim_corr) {
 
 P_neg_1yr <- function(n_it, clim_sd, clim_corr) {
   
-  
   init_pop_vec <- runif(200)
   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
   
@@ -335,6 +334,15 @@ P_neg_1yr <- function(n_it, clim_sd, clim_corr) {
              iterations = n_it)
   
   
+  lambdas <- tibble(clim_sd = clim_sd,
+                    autocorrelation = clim_corr,
+                    ### get lambda non-lagged ---------------------------------------------------------
+                    non_lagged = lambda(clim_mod, "pop_size", "stochastic"), 
+                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")))
+  
+  # remove clim_mod object to save memory
+  rm(clim_mod)
+  
   ## lagged ipm ----------------------------------------
   
   ipm_lagged <- init_ipm("simple_di_stoch_param") %>%
@@ -413,22 +421,14 @@ P_neg_1yr <- function(n_it, clim_sd, clim_corr) {
              iterations = n_it)
   
   
-  ### temperature sd of simulation -------------------------------------------------
-  lambdas <- tibble(clim_sd = clim_sd,
-                    autocorrelation = clim_corr,
-                    ### get lambda non-lagged ---------------------------------------------------------
-                    non_lagged = clim_mod$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]),
-                    ### get lambda lagged  ---------------------------------------------------------
-                    lagged = ipm_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    lagged_all = list(lambda(ipm_lagged, "pop_size", "all")[-c(1:(n_it - 1000))])
-  )
+  lambdas$lagged <- lambda(ipm_lagged, "pop_size", "stochastic")
+  lambdas$lagged_all <- list(lambda(ipm_lagged, "pop_size", "all"))
+  
   
   return(lambdas)
 }
 
 P_2yr <- function(n_it, clim_sd, clim_corr) {
-  
   
   init_pop_vec <- runif(200)
   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
@@ -543,6 +543,15 @@ P_2yr <- function(n_it, clim_sd, clim_corr) {
              iterations = n_it)
   
   
+  lambdas <- tibble(clim_sd = clim_sd,
+                    autocorrelation = clim_corr,
+                    ### get lambda non-lagged ---------------------------------------------------------
+                    non_lagged = lambda(clim_mod, "pop_size", "stochastic"), 
+                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")))
+  
+  # remove clim_mod object to save memory
+  rm(clim_mod)
+  
   ## lagged ipm ----------------------------------------
   
   ipm_lagged <- init_ipm("simple_di_stoch_param") %>%
@@ -621,22 +630,14 @@ P_2yr <- function(n_it, clim_sd, clim_corr) {
              iterations = n_it)
   
   
-  ### temperature sd of simulation -------------------------------------------------
-  lambdas <- tibble(clim_sd = clim_sd,
-                    autocorrelation = clim_corr,
-                    ### get lambda non-lagged ---------------------------------------------------------
-                    non_lagged = clim_mod$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]),
-                    ### get lambda lagged  ---------------------------------------------------------
-                    lagged = ipm_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    lagged_all = list(lambda(ipm_lagged, "pop_size", "all")[-c(1:(n_it - 1000))])
-  )
+  lambdas$lagged <- lambda(ipm_lagged, "pop_size", "stochastic")
+  lambdas$lagged_all <- list(lambda(ipm_lagged, "pop_size", "all"))
+  
   
   return(lambdas)
 }
 
 PF_1yr <- function(n_it, clim_sd, clim_corr) {
-  
   
   init_pop_vec <- runif(200)
   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
@@ -700,7 +701,7 @@ PF_1yr <- function(n_it, clim_sd, clim_corr) {
       family = "CC",
       
       fp = inv_logit(fpC_int + fpC_slope * log(size_1) + fpC_temp * temp0),
-      fn = pois(fnC_int + fnC_slope * log(size_1) + fpC_temp * temp0),
+      fn = pois(fnC_int + fnC_slope * log(size_1) + fnC_temp * temp0),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
@@ -751,6 +752,15 @@ PF_1yr <- function(n_it, clim_sd, clim_corr) {
              iterations = n_it)
   
   
+  lambdas <- tibble(clim_sd = clim_sd,
+                    autocorrelation = clim_corr,
+                    ### get lambda non-lagged ---------------------------------------------------------
+                    non_lagged = lambda(clim_mod, "pop_size", "stochastic"), 
+                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")))
+  
+  # remove clim_mod object to save memory
+  rm(clim_mod)
+  
   ## lagged ipm ----------------------------------------
   
   ipm_P_lagged <- init_ipm("simple_di_stoch_param") %>%
@@ -779,7 +789,7 @@ PF_1yr <- function(n_it, clim_sd, clim_corr) {
       family = "CC",
       
       fp = inv_logit(fpC_int + fpC_slope * log(size_1) + fpC_temp * temp0),
-      fn = pois(fnC_int + fnC_slope * log(size_1) + fpC_temp * temp0),
+      fn = pois(fnC_int + fnC_slope * log(size_1) + fnC_temp * temp0),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
@@ -828,6 +838,14 @@ PF_1yr <- function(n_it, clim_sd, clim_corr) {
              iterate = T, 
              iterations = n_it)
   
+  
+  lambdas$lagged_P <- lambda(ipm_P_lagged, "pop_size", "stochastic")
+  lambdas$lagged_P_all <- list(lambda(ipm_P_lagged, "pop_size", "all"))
+  
+  # remove clim_mod object to save memory
+  rm(ipm_P_lagged)
+  
+  ## lagged F ipm ----------------------------------------
   
   ipm_F_lagged <- init_ipm("simple_di_stoch_param") %>%
     define_kernel(
@@ -855,7 +873,7 @@ PF_1yr <- function(n_it, clim_sd, clim_corr) {
       family = "CC",
       
       fp = inv_logit(fpC_int + fpC_slope * log(size_1) + fpC_temp * temp1),
-      fn = pois(fnC_int + fnC_slope * log(size_1) + fpC_temp * temp1),
+      fn = pois(fnC_int + fnC_slope * log(size_1) + fnC_temp * temp1),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
@@ -905,24 +923,13 @@ PF_1yr <- function(n_it, clim_sd, clim_corr) {
              iterations = n_it)
   
   
-  ### temperature sd of simulation -------------------------------------------------
-  lambdas <- tibble(clim_sd = clim_sd,
-                    autocorrelation = clim_corr,
-                    ### get lambda non-lagged ---------------------------------------------------------
-                    non_lagged = clim_mod$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]),
-                    ### get lambda lagged  ---------------------------------------------------------
-                    lagged_P = ipm_P_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    lagged_P_all = list(lambda(ipm_P_lagged, "pop_size", "all")[-c(1:(n_it - 1000))]),
-                    lagged_F = ipm_F_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    lagged_F_all = list(lambda(ipm_F_lagged, "pop_size", "all")[-c(1:(n_it - 1000))])
-  )
+  lambdas$lagged_F <- lambda(ipm_F_lagged, "pop_size", "stochastic")
+  lambdas$lagged_F_all <- list(lambda(ipm_F_lagged, "pop_size", "all"))
   
   return(lambdas)
 }
 
 PF_neg_1yr <- function(n_it, clim_sd, clim_corr) {
-  
   
   init_pop_vec <- runif(200)
   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
@@ -967,7 +974,7 @@ PF_neg_1yr <- function(n_it, clim_sd, clim_corr) {
       formula = s * g,
       family = "CC",
       
-      s = inv_logit(s_int + s_slope * log(size_1) + s_temp * temp0),
+      s = inv_logit(s_int + s_slope * log(size_1) - s_temp * temp0),
       g = dnorm(size_2, mean = g_mean, sd = g_sd),
       g_mean = pois(g_int + g_slope * log(size_1)  + g_temp * temp0),
       
@@ -986,7 +993,7 @@ PF_neg_1yr <- function(n_it, clim_sd, clim_corr) {
       family = "CC",
       
       fp = inv_logit(fpC_int + fpC_slope * log(size_1) + fpC_temp * temp0),
-      fn = pois(fnC_int + fnC_slope * log(size_1) + fpC_temp * temp0),
+      fn = pois(fnC_int + fnC_slope * log(size_1) + fnC_temp * temp0),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
@@ -1037,6 +1044,15 @@ PF_neg_1yr <- function(n_it, clim_sd, clim_corr) {
              iterations = n_it)
   
   
+  lambdas <- tibble(clim_sd = clim_sd,
+                    autocorrelation = clim_corr,
+                    ### get lambda non-lagged ---------------------------------------------------------
+                    non_lagged = lambda(clim_mod, "pop_size", "stochastic"), 
+                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")))
+  
+  # remove clim_mod object to save memory
+  rm(clim_mod)
+  
   ## lagged ipm ----------------------------------------
   
   ipm_P_lagged <- init_ipm("simple_di_stoch_param") %>%
@@ -1046,7 +1062,7 @@ PF_neg_1yr <- function(n_it, clim_sd, clim_corr) {
       formula = s * g,
       family = "CC",
       
-      s = inv_logit(s_int + s_slope * log(size_1) + s_temp * temp1),
+      s = inv_logit(s_int + s_slope * log(size_1) - s_temp * temp1),
       g = dnorm(size_2, mean = g_mean, sd = g_sd),
       g_mean = pois(g_int + g_slope * log(size_1)  + g_temp * temp1),
       
@@ -1065,7 +1081,7 @@ PF_neg_1yr <- function(n_it, clim_sd, clim_corr) {
       family = "CC",
       
       fp = inv_logit(fpC_int + fpC_slope * log(size_1) + fpC_temp * temp0),
-      fn = pois(fnC_int + fnC_slope * log(size_1) + fpC_temp * temp0),
+      fn = pois(fnC_int + fnC_slope * log(size_1) + fnC_temp * temp0),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
@@ -1114,6 +1130,14 @@ PF_neg_1yr <- function(n_it, clim_sd, clim_corr) {
              iterate = T, 
              iterations = n_it)
   
+  
+  lambdas$lagged_P <- lambda(ipm_P_lagged, "pop_size", "stochastic")
+  lambdas$lagged_P_all <- list(lambda(ipm_P_lagged, "pop_size", "all"))
+  
+  # remove clim_mod object to save memory
+  rm(ipm_P_lagged)
+  
+  ## lagged F ipm ----------------------------------------
   
   ipm_F_lagged <- init_ipm("simple_di_stoch_param") %>%
     define_kernel(
@@ -1141,7 +1165,7 @@ PF_neg_1yr <- function(n_it, clim_sd, clim_corr) {
       family = "CC",
       
       fp = inv_logit(fpC_int + fpC_slope * log(size_1) + fpC_temp * temp1),
-      fn = pois(fnC_int + fnC_slope * log(size_1) + fpC_temp * temp1),
+      fn = pois(fnC_int + fnC_slope * log(size_1) + fnC_temp * temp1),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
@@ -1191,18 +1215,8 @@ PF_neg_1yr <- function(n_it, clim_sd, clim_corr) {
              iterations = n_it)
   
   
-  ### temperature sd of simulation -------------------------------------------------
-  lambdas <- tibble(clim_sd = clim_sd,
-                    autocorrelation = clim_corr,
-                    ### get lambda non-lagged ---------------------------------------------------------
-                    non_lagged = clim_mod$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,
-                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]),
-                    ### get lambda lagged  ---------------------------------------------------------
-                    lagged_P = ipm_P_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,
-                    lagged_P_all = list(lambda(ipm_P_lagged, "pop_size", "all")[-c(1:(n_it - 1000))]),
-                    lagged_F = ipm_F_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,
-                    lagged_F_all = list(lambda(ipm_F_lagged, "pop_size", "all")[-c(1:(n_it - 1000))])
-  )
+  lambdas$lagged_F <- lambda(ipm_F_lagged, "pop_size", "stochastic")
+  lambdas$lagged_F_all <- list(lambda(ipm_F_lagged, "pop_size", "all"))
   
   return(lambdas)
 }
