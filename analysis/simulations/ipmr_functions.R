@@ -208,11 +208,11 @@ P_1yr <- function(n_it, clim_sd, clim_corr) {
   lambdas <- tibble(clim_sd = clim_sd,
                         autocorrelation = clim_corr,
                         ### get lambda non-lagged ---------------------------------------------------------
-                        non_lagged = clim_mod$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                        non_lagged_all = list(lambda(clim_mod, "pop_size", "all")),
+                        non_lagged = lambda(clim_mod, "pop_size", "stochastic"),   ## discard the first 10% as "burn-in" phase
+                        non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]),
                         ### get lambda lagged  ---------------------------------------------------------
-                        lagged = ipm_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                        lagged_all = list(lambda(ipm_lagged, "pop_size", "all"))
+                        lagged = lambda(ipm_lagged, "pop_size", "stochastic"),   ## discard the first 10% as "burn-in" phase
+                        lagged_all = list(lambda(ipm_lagged, "pop_size", "all")[-c(1:(n_it - 1000))])
   )
   
   return(lambdas)
@@ -417,10 +417,10 @@ P_neg_1yr <- function(n_it, clim_sd, clim_corr) {
                     autocorrelation = clim_corr,
                     ### get lambda non-lagged ---------------------------------------------------------
                     non_lagged = clim_mod$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")),
+                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]),
                     ### get lambda lagged  ---------------------------------------------------------
                     lagged = ipm_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    lagged_all = list(lambda(ipm_lagged, "pop_size", "all"))
+                    lagged_all = list(lambda(ipm_lagged, "pop_size", "all")[-c(1:(n_it - 1000))])
   )
   
   return(lambdas)
@@ -625,10 +625,10 @@ P_2yr <- function(n_it, clim_sd, clim_corr) {
                     autocorrelation = clim_corr,
                     ### get lambda non-lagged ---------------------------------------------------------
                     non_lagged = clim_mod$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")),
+                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]),
                     ### get lambda lagged  ---------------------------------------------------------
                     lagged = ipm_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    lagged_all = list(lambda(ipm_lagged, "pop_size", "all"))
+                    lagged_all = list(lambda(ipm_lagged, "pop_size", "all")[-c(1:(n_it - 1000))])
   )
   
   return(lambdas)
@@ -909,12 +909,12 @@ PF_1yr <- function(n_it, clim_sd, clim_corr) {
                     autocorrelation = clim_corr,
                     ### get lambda non-lagged ---------------------------------------------------------
                     non_lagged = clim_mod$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")),
+                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]),
                     ### get lambda lagged  ---------------------------------------------------------
                     lagged_P = ipm_P_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    lagged_P_all = list(lambda(ipm_P_lagged, "pop_size", "all")),
+                    lagged_P_all = list(lambda(ipm_P_lagged, "pop_size", "all")[-c(1:(n_it - 1000))]),
                     lagged_F = ipm_F_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,   ## discard the first 10% as "burn-in" phase
-                    lagged_F_all = list(lambda(ipm_F_lagged, "pop_size", "all"))
+                    lagged_F_all = list(lambda(ipm_F_lagged, "pop_size", "all")[-c(1:(n_it - 1000))])
   )
   
   return(lambdas)
@@ -1195,12 +1195,12 @@ PF_neg_1yr <- function(n_it, clim_sd, clim_corr) {
                     autocorrelation = clim_corr,
                     ### get lambda non-lagged ---------------------------------------------------------
                     non_lagged = clim_mod$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,
-                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")),
+                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]),
                     ### get lambda lagged  ---------------------------------------------------------
                     lagged_P = ipm_P_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,
-                    lagged_P_all = list(lambda(ipm_P_lagged, "pop_size", "all")),
+                    lagged_P_all = list(lambda(ipm_P_lagged, "pop_size", "all")[-c(1:(n_it - 1000))]),
                     lagged_F = ipm_F_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,
-                    lagged_F_all = list(lambda(ipm_F_lagged, "pop_size", "all"))
+                    lagged_F_all = list(lambda(ipm_F_lagged, "pop_size", "all")[-c(1:(n_it - 1000))])
   )
   
   return(lambdas)
@@ -1408,10 +1408,10 @@ P_neg_1yr_man <- function(n_it, clim_sd) {
                     autocorrelation = clim_corr,
                     ### get lambda non-lagged ---------------------------------------------------------
                     non_lagged = clim_mod$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,
-                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")),
+                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]),
                     ### get lambda lagged  ---------------------------------------------------------
                     lagged = ipm_lagged$pop_state$lambda[-c(1:round(0.1*n_it))] %>% log %>% mean,
-                    lagged_all = list(lambda(ipm_lagged, "pop_size", "all")),
+                    lagged_all = list(lambda(ipm_lagged, "pop_size", "all")[-c(1:(n_it - 1000))]),
                     ### population sizes
                     pop_non_lagged = list(clim_mod$pop_state$pop_state_size),
                     pop_lagged = list(ipm_lagged$pop_state$pop_state_size)

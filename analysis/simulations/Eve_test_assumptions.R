@@ -48,6 +48,16 @@ fn <- readRDS("/data/gsclim/ipmr_lagged_test/HEQU_fn.rds")
 fpC <- readRDS("/data/gsclim/ipmr_lagged_test/HEQU_fp_climate.rds")
 fnC <- readRDS("/data/gsclim/ipmr_lagged_test/HEQU_fn_climate.rds")
 
+## Local locations
+# survC <- readRDS("data/simulation/vital-rate models/HEQU_s_climate.rds")
+# growthC <- readRDS("data/simulation/vital-rate models/HEQU_g_climate.rds")
+# 
+# fp <- readRDS("data/simulation/vital-rate models/HEQU_fp.rds")
+# fn <- readRDS("data/simulation/vital-rate models/HEQU_fn.rds")
+# fpC <- readRDS("data/simulation/vital-rate models/HEQU_fp_climate.rds")
+# fnC <- readRDS("data/simulation/vital-rate models/HEQU_fn_climate.rds")
+
+
 
 
 ## create parameter list -------------------------------------------------------------------------
