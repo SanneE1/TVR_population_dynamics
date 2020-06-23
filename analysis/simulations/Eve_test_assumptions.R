@@ -7,6 +7,7 @@ suppressPackageStartupMessages(library(tidyr))
 
 
 start <- Sys.time()
+start
 #  ----------------------------------------------------------------------------------------------------------------------------
 # parsing arguments
 #  ----------------------------------------------------------------------------------------------------------------------------
@@ -89,8 +90,11 @@ params_list <- list(
 clim_sd <- rep(seq(from = 0, to = 2, length.out = 16), 60)
 clim_corr <- rep(rep(c(-0.9,0,0.9), each = 16), 20)
 
+clim_sd[taskID]
+clim_corr[taskID]
 
 if(foption == "P_1yr") {
+  message("P_yr")
   lambda <- P_1yr(n_it = 10000, clim_sd = clim_sd[taskID], clim_corr = clim_corr[taskID])
 } 
 if(foption == "P_2yr") {

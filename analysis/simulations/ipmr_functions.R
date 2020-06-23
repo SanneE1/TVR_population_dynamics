@@ -12,6 +12,7 @@ create_seq <- function(n_it, clim_sd, clim_corr) {
 
 P_1yr <- function(n_it, clim_sd, clim_corr) {
   
+message("1")
 
   init_pop_vec <- runif(200)
   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
@@ -48,6 +49,7 @@ P_1yr <- function(n_it, clim_sd, clim_corr) {
   
   
   ### set up non-lagged ipm -------------------------------------------------------------------------
+message("2")
   
   clim_mod <- init_ipm("simple_di_stoch_param") %>%
     define_kernel(
@@ -126,6 +128,13 @@ P_1yr <- function(n_it, clim_sd, clim_corr) {
              iterations = n_it)
   
 
+  lambdas <- tibble(clim_sd = clim_sd,
+                    autocorrelation = clim_corr,
+                    ### get lambda non-lagged ---------------------------------------------------------
+                    non_lagged = lambda(clim_mod, "pop_size", "stochastic"), 
+                    non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]))
+rm(clim_mod)
+
   ## lagged ipm ----------------------------------------
   
   ipm_lagged <- init_ipm("simple_di_stoch_param") %>%
@@ -202,18 +211,13 @@ P_1yr <- function(n_it, clim_sd, clim_corr) {
       make_ipm(usr_funs = my_functions, 
                iterate = T, 
                iterations = n_it)
-    
+str(ipm_lagged)    
+message("3")
+str(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))])
  
-  ### temperature sd of simulation -------------------------------------------------
-  lambdas <- tibble(clim_sd = clim_sd,
-                        autocorrelation = clim_corr,
-                        ### get lambda non-lagged ---------------------------------------------------------
-                        non_lagged = lambda(clim_mod, "pop_size", "stochastic"),   ## discard the first 10% as "burn-in" phase
-                        non_lagged_all = list(lambda(clim_mod, "pop_size", "all")[-c(1:(n_it - 1000))]),
-                        ### get lambda lagged  ---------------------------------------------------------
-                        lagged = lambda(ipm_lagged, "pop_size", "stochastic"),   ## discard the first 10% as "burn-in" phase
-                        lagged_all = list(lambda(ipm_lagged, "pop_size", "all")[-c(1:(n_it - 1000))])
-  )
+  lambdas$lagged <- lambda(ipm_lagged, "pop_size", "stochastic")
+  lambdas$lagged_all <- list(lambda(ipm_lagged, "pop_size", "all")
+
   
   return(lambdas)
 }
