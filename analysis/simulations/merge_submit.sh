@@ -22,7 +22,10 @@
 #needed when submitting a non-parallel job
 #$ -binding linear:1
 
+module load foss/2018b R/3.5.1
+
+
 output=$1
 
-Rscript "$HOME"/lagged_buffering/simulations/merge_array_jobs.R \
+Rscript "$HOME"/lagged_buffering/analysis/simulations/merge_array_jobs.R \
 "$output"

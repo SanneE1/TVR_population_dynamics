@@ -16,7 +16,12 @@ output <- cli$args[1]
 df <- as.list(file.path(output, list.files(output)))
 df <- lapply(df, readRDS) %>% bind_rows
 
+str(df)
 
-stringr::str_split(list.files(output)[1], "[[:punct:]]")
+strings <- stringr::str_split(list.files(output)[1], "[[:punct:]]")
+strings 
 
-saveRDS(df, file = file.path(output, "Merged.RDS"))
+out.file = paste(output,strings[[1]][3],"_", strings[[1]][4], "_", "Merged.RDS", sep = "")
+out.file 
+
+saveRDS(df, file = out.file)
