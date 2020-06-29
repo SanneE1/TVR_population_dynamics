@@ -2,10 +2,11 @@
 create_seq <- function(n_it, clim_sd, clim_corr) { 
   for(n in c(1:(n_it+5))) 
     if(n == 1) {
-      seq <- rnorm(1,0, clim_sd)
+      seq <- rnorm(1)
     } else {
-      seq[n] <- clim_corr * seq[n-1] + rnorm(1,0,clim_sd)
+      seq[n] <- clim_corr * seq[n-1] + rnorm(1)
     }
+  seq <- scale(seq) * clim_sd
   return(seq)
 }
 
