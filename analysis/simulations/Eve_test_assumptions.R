@@ -40,52 +40,35 @@ taskID
 
 source("/home/evers/lagged_buffering/analysis/simulations/ipmr_functions.R")
 
-## load models -------------------------------------------------------------------------
-survC <- readRDS("/data/gsclim/ipmr_lagged_test/HEQU_s_climate.rds")
-growthC <- readRDS("/data/gsclim/ipmr_lagged_test/HEQU_g_climate.rds")
-
-fp <- readRDS("/data/gsclim/ipmr_lagged_test/HEQU_fp.rds")
-fn <- readRDS("/data/gsclim/ipmr_lagged_test/HEQU_fn.rds")
-fpC <- readRDS("/data/gsclim/ipmr_lagged_test/HEQU_fp_climate.rds")
-fnC <- readRDS("/data/gsclim/ipmr_lagged_test/HEQU_fn_climate.rds")
-
-## Local locations
-# survC <- readRDS("data/simulation/vital-rate models/HEQU_s_climate.rds")
-# growthC <- readRDS("data/simulation/vital-rate models/HEQU_g_climate.rds")
-# 
-# fp <- readRDS("data/simulation/vital-rate models/HEQU_fp.rds")
-# fn <- readRDS("data/simulation/vital-rate models/HEQU_fn.rds")
-# fpC <- readRDS("data/simulation/vital-rate models/HEQU_fp_climate.rds")
-# fnC <- readRDS("data/simulation/vital-rate models/HEQU_fn_climate.rds")
-
-
-
 
 ## create parameter list -------------------------------------------------------------------------
 
+
 params_list <- list(
-  s_int = fixef(survC)[1],
-  s_slope = fixef(survC)[2],
-  s_temp = fixef(survC)[5],
-  g_int = fixef(growthC)[1],
-  g_slope = fixef(growthC)[2],
-  g_temp = fixef(growthC)[5],
-  g_sd = sd(resid(growthC)),
-  fp_int = fixef(fp)[1],
-  fp_slope = fixef(fp)[2],
-  fpC_int = fixef(fpC)[1],
-  fpC_slope = fixef(fpC)[2],
-  fpC_temp = fixef(fpC)[5],
-  fn_int = fixef(fn)[1],
-  fn_slope = fixef(fn)[2],
-  fnC_int = fixef(fnC)[1],
-  fnC_slope = fixef(fnC)[2],
-  fnC_temp = fixef(fnC)[5],
+  s_int = -0.229,
+  s_slope = 1.077,
+  # s_temp = 1.233,
+  g_int = 0.424,
+  g_slope = 0.846,
+  # g_temp = -0.066,
+  g_sd = 1.076,
+  fp_int = -3.970,
+  fp_slope = 1.719,
+  fpC_int = -3.859385,
+  fpC_slope = 1.719768,
+  fpC_temp = -0.6169492,
+  fn_int = -0.6652477,
+  fn_slope = 0.7048809,
+  fnC_int = -0.5661762,
+  fnC_slope = 0.7048782,
+  fnC_temp = -0.3398345,
   germ_mean = 0.1262968,
   germ_sd = 0.2725941,
   fd_mean = 1.178749,
   fd_sd = 0.8747764
 )
+
+
 
 clim_sd <- rep(seq(from = 0, to = 2, length.out = 16), 60)
 clim_corr <- rep(rep(c(-0.9,0,0.9), each = 16), 20)
@@ -94,23 +77,91 @@ clim_sd[taskID]
 clim_corr[taskID]
 
 if(foption == "P_1yr") {
-  message("P_yr")
-  lambda <- P_1yr(n_it = 10000, clim_sd = clim_sd[taskID], clim_corr = clim_corr[taskID])
+  message("Within P kernel 1 year lagged")
+  lambda <- P_lambdas(n_it = 10000, 
+                  clim_sd = clim_sd[taskID], 
+                  clim_corr = clim_corr[taskID], 
+                  params_list = params_list, 
+                  clim_params = list(s_temp = 1.233, 
+                                     g_temp = 0.066))
+  
+  
+  b <- lapply(lambda$M_non_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
+  c <- corrr::correlate(b)
+  d <- as.matrix(c[,-1])
+  n_corr_hist[[n]] <- d
+  n_corr_sum[n] <- mean(d, na.rm = T)
+  n_lambda[n] <- lambda$non_lagged
+  
+  e <- lapply(lambda$M_s_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
+  f <- corrr::correlate(e)
+  g <- as.matrix(f[,-1])
+  s_corr_hist[[n]] <- g
+  s_corr_sum[n] <- mean(g, na.rm = T)
+  s_lambda[n] <- lambda$lagged_s
+  
+  h <- lapply(lambda$M_g_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
+  i <- corrr::correlate(h)
+  j <- as.matrix(i[,-1])
+  g_corr_hist[[n]] <- j
+  g_corr_sum[n] <- mean(j, na.rm = T)
+  g_lambda[n] <- lambda$lagged_g
 } 
-if(foption == "P_2yr") {
-  lambda <- P_2yr(n_it = 10000, clim_sd = clim_sd[taskID], clim_corr = clim_corr[taskID])
-} 
+
 if(foption == "P_neg_1yr"){
-  lambda <- P_neg_1yr(n_it = 10000, clim_sd = clim_sd[taskID], clim_corr = clim_corr[taskID])
+  lambda <- P_lambdas(n_it = 10000, 
+                      clim_sd = clim_sd[taskID], 
+                      clim_corr = clim_corr[taskID], 
+                      params_list = params_list, 
+                      clim_params = list(s_temp = -1.233, 
+                                         g_temp = -0.066))
+  
+  b <- lapply(lambda$M_non_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
+  c <- corrr::correlate(b)
+  d <- as.matrix(c[,-1])
+  n_corr_hist[[n]] <- d
+  n_corr_sum[n] <- mean(d, na.rm = T)
+  n_lambda[n] <- lambda$non_lagged
+  
+  e <- lapply(lambda$M_s_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
+  f <- corrr::correlate(e)
+  g <- as.matrix(f[,-1])
+  s_corr_hist[[n]] <- g
+  s_corr_sum[n] <- mean(g, na.rm = T)
+  s_lambda[n] <- lambda$lagged_s
+  
+  h <- lapply(lambda$M_g_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
+  i <- corrr::correlate(h)
+  j <- as.matrix(i[,-1])
+  g_corr_hist[[n]] <- j
+  g_corr_sum[n] <- mean(j, na.rm = T)
+  g_lambda[n] <- lambda$lagged_g
 }
 if(foption == "PF_1yr") {
-  lambda <- PF_1yr(n_it = 10000, clim_sd = clim_sd[taskID], clim_corr = clim_corr[taskID])
+  lambda <- PF_lambdas(n_it = 10000, 
+                       clim_sd = clim_sd[taskID], 
+                       clim_corr = clim_corr[taskID], 
+                       params_list = params_list, 
+                       clim_params = list(s_temp = 1.233, 
+                                          g_temp = -0.066,
+                                          fpC_temp = -0.617,
+                                          fnC_temp = -0.34))
 }
 if(foption == "PF_neg_1yr") {
-  lambda <- PF_neg_1yr(n_it = 10000, clim_sd = clim_sd[taskID], clim_corr = clim_corr[taskID])
-}
+  lambda <- PF_lambdas(n_it = 10000, 
+                       clim_sd = clim_sd[taskID], 
+                       clim_corr = clim_corr[taskID], 
+                       params_list = params_list, 
+                       clim_params = list(s_temp = -1.233, 
+                                          g_temp = -0.066,
+                                          fpC_temp = -0.617,
+                                          fnC_temp = -0.34))}
 
-
+if(foption == "P_2yr") {
+  lambda <- P_2yr(n_it = 10000, 
+                  clim_sd = clim_sd[taskID], 
+                  clim_corr = clim_corr[taskID])
+} 
 
 saveRDS(lambda, file = output)
 
