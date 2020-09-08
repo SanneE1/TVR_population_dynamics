@@ -23,7 +23,7 @@ Parsoptions <- list (
 )
 
 parser <- OptionParser(
-  usage       = "Rscript %prog [options] output",
+  usage       = "Rscript %prog [options] output meshpoints iterations",
   option_list = Parsoptions,
   description = "\nan Run lagged ipmr functions",
   epilogue    = ""
@@ -34,6 +34,8 @@ cli <- parse_args(parser, positional_arguments = 1)
 foption <- cli$options$foption
 taskID <- as.integer(Sys.getenv("SGE_TASK_ID"))
 output <- cli$args[1]
+n_mesh <- cli$args[2]
+n_it <- cli$args[3]
 
 foption
 taskID
@@ -78,12 +80,13 @@ clim_corr[taskID]
 
 if(foption == "P_1yr") {
   message("Within P kernel 1 year lagged")
-  lambda <- P_lambdas(n_it = 10000, 
+  lambda <- P_lambdas(n_it = n_it, 
                   clim_sd = clim_sd[taskID], 
                   clim_corr = clim_corr[taskID], 
                   params_list = params_list, 
                   clim_params = list(s_temp = 1.233, 
-                                     g_temp = 0.066))
+                                     g_temp = 0.066),
+                  n_mesh = n_mesh)
   
   
   b <- lapply(lambda$M_non_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
@@ -109,12 +112,13 @@ if(foption == "P_1yr") {
 } 
 
 if(foption == "P_neg_1yr"){
-  lambda <- P_lambdas(n_it = 10000, 
+  lambda <- P_lambdas(n_it = n_it, 
                       clim_sd = clim_sd[taskID], 
                       clim_corr = clim_corr[taskID], 
                       params_list = params_list, 
                       clim_params = list(s_temp = -1.233, 
-                                         g_temp = -0.066))
+                                         g_temp = -0.066),
+                      n_mesh = n_mesh)
   
   b <- lapply(lambda$M_non_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
   c <- corrr::correlate(b)
