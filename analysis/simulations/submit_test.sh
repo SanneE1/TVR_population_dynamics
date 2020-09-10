@@ -15,7 +15,7 @@
 
 
 # memory per core (hard limit)
-#$ -l h_vmem=10G
+#$ -l h_vmem=40G
 
 # Array numbers 
 #$ -t 1-960
@@ -31,12 +31,12 @@ mkdir -p "$output_dir"
 module load foss/2018b R/3.5.1
 
 function=$1
-meshpoints = $2
-iterations = $3
+meshpoints=$2
+iterations=$3
 output="$output_dir"/${JOB_NAME}_${function}_${JOB_ID}_$SGE_TASK_ID.rds
 
 Rscript "$HOME"/lagged_buffering/analysis/simulations/Eve_test_assumptions.R \
 --function="$function" \
 "$output" \
 "$meshpoints" \
-"$iterations" \
+"$iterations"
