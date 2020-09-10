@@ -31,12 +31,16 @@ mkdir -p "$output_dir"
 module load foss/2018b R/3.5.1
 
 function=$1
-meshpoints=$2
-iterations=$3
+params=$2
+climparams=$3
+iterations=$4
+meshpoints=$5
 output="$output_dir"/${JOB_NAME}_${function}_${JOB_ID}_$SGE_TASK_ID.rds
 
 Rscript "$HOME"/lagged_buffering/analysis/simulations/Eve_test_assumptions.R \
 --function="$function" \
+--iterations="$iterations" \
+--meshpoints="$meshpoints" \
 "$output" \
-"$meshpoints" \
-"$iterations"
+"$params" \
+"$climparams"
