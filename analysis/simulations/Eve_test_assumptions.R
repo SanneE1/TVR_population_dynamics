@@ -30,7 +30,7 @@ Parsoptions <- list (
     opt_str = c("-m", "--meshpoints"),
     dest    = "n_mesh",
     help    = "number of meshpoints when integrating the IPM",
-    default = 100),  
+    default = 100)
   
 )
 
@@ -41,7 +41,7 @@ parser <- OptionParser(
   epilogue    = ""
 )
 
-cli <- parse_args(parser, positional_arguments = 5)
+cli <- parse_args(parser, positional_arguments = 3)
 
 foption <- cli$options$foption
 n_mesh <- as.integer(cli$options$n_mesh)
@@ -50,23 +50,25 @@ n_it <- as.integer(cli$options$n_it)
 taskID <- as.integer(Sys.getenv("SGE_TASK_ID"))
 
 output <- cli$args[1]
-paramters <- cli$args[2]
+parameters <- cli$args[2]
 clim_par <- cli$args[3]
 
 
 foption
 taskID
-str(n_mesh)
-str(n_it)
-parameters
-clim_par
+n_mesh
+n_it
 
 source("/home/evers/lagged_buffering/analysis/simulations/ipmr_functions.R")
 params_list <- read.csv(parameters) 
-params_list <- as.list(setNames(as.character(params_list$Value), params_list$Parameter))
+params_list <- as.list(setNames(as.numeric(params_list$Value), params_list$Parameter))
+
+str(params_list)
 
 clim_list <- read.csv(clim_par) 
-clim_list <- as.list(setNames(as.character(clim_list$Value), clim_list$Parameter))
+clim_list <- as.list(setNames(as.numeric(clim_list$Value), clim_list$Parameter))
+
+str(clim_list)
 
 ## create parameter list -------------------------------------------------------------------------
 
@@ -109,7 +111,7 @@ if(foption == "P_2yr") {
 
 
 print("ipm done")  
-b <- lapply(lambda$M_non_lagged[[1]][c((0.9*n_it):n_it)], function(x) as.vector(x)) %>% bind_rows %>% t
+b <- lapply(lambda$M_non_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
 print("start corr1")
 c <- corrr::correlate(b)
 print("correlation1 done")
@@ -119,8 +121,10 @@ n_corr_sum <- mean(d, na.rm = T)
 n_corr_sd <- sd(d, na.rm = T)
 n_lambda <- lambda$non_lagged
 
+rm(b,c,d)
+
 print("start corr2")
-e <- lapply(lambda$M_s_lagged[[1]][c((0.9*n_it):n_it)], function(x) as.vector(x)) %>% bind_rows %>% t
+e <- lapply(lambda$M_s_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
 print("correlation2 done")
 f <- corrr::correlate(e)
 g <- as.matrix(f[,-1])
@@ -129,8 +133,9 @@ s_corr_sum <- mean(g, na.rm = T)
 s_corr_sd <- sd(g, na.rm = T)
 s_lambda <- lambda$lagged_s
 
+rm(e,f,g)
 
-h <- lapply(lambda$M_g_lagged[[1]][c((0.9*n_it):n_it)], function(x) as.vector(x)) %>% bind_rows %>% t
+h <- lapply(lambda$M_g_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
 print("start corr3")
 i <- corrr::correlate(h)
 print("correlation3 done")
@@ -140,11 +145,14 @@ g_corr_sum <- mean(j, na.rm = T)
 g_corr_sd <- sd(j, na.rm = T)
 g_lambda <- lambda$lagged_g
 
+rm(h,i,j)
 
 df <- data.frame(clim_corr, clim_sd,
                  n_lambda, s_lambda, g_lambda,
                  n_corr_sum, s_corr_sum, g_corr_sum,
                  n_corr_sd, s_corr_sd, g_corr_sd)
+str(df)
+output
 
 saveRDS(df, file = output)
 

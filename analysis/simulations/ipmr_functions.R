@@ -11,7 +11,7 @@ create_seq <- function(n_it, clim_sd, clim_corr) {
 }
 
 
-P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh = 200, save_K = FALSE) {
+P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh = 200, save_K = FALSE, n_save_K = 0.1) {
   
   init_pop_vec <- runif(n_mesh)
   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
@@ -127,7 +127,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
              iterate = TRUE,
              iterations = n_it)
   
-  
+  message("ipm 1 done")
   lambdas <- tibble(clim_sd = clim_sd,
                     autocorrelation = clim_corr,
                     s_temp = clim_params$s_temp,
@@ -136,16 +136,19 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
                     non_lagged = lambda(clim_mod, "pop_size", "stochastic"), 
                     non_lagged_all = list(lambda(clim_mod, "pop_size", "all")),
                     n_env_seq = list(clim_mod$env_seq))
-  
+
+  message("trying to assign K matrices to tibble")
+
   if(save_K == T) {
-  lambdas$M_non_lagged <- list(clim_mod$iterators)
+  lambdas$M_non_lagged <- list(clim_mod$iterators[c((n_it - (n_it * n_save_K)):n_it)])
   }
-  
+  message("done")
+
   # remove clim_mod object to save memory
   rm(clim_mod)
   
   ## lagged s ipm ----------------------------------------
-  
+  message("starting 2nd ipm")  
   ipm_s_lagged <- init_ipm("simple_di_stoch_param") %>%
   
       define_kernel(
@@ -222,20 +225,21 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
              iterate = T, 
              iterations = n_it)
   
-  
+  message("done")
   lambdas$lagged_s <- lambda(ipm_s_lagged, "pop_size", "stochastic")
   lambdas$lagged_s_all <- list(lambda(ipm_s_lagged, "pop_size", "all"))
   lambdas$s_env_seq <- list(ipm_s_lagged$env_seq)
   
+  message("assigning 2nd set K kernels")
   if(save_K == T){
-  lambdas$M_s_lagged <- list(ipm_s_lagged$iterators)
+  lambdas$M_s_lagged <- list(ipm_s_lagged$iterators[c((n_it - (n_it * n_save_K)):n_it)])
   }
-  
+  message("done")
   # remove clim_mod object to save memory
   rm(ipm_s_lagged)
   
   ## lagged g ipm ----------------------------------------
-  
+  message("starting 3rd ipm")
   ipm_g_lagged <- init_ipm("simple_di_stoch_param") %>%
     define_kernel(
       name = "P",
@@ -311,15 +315,16 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
              iterate = T, 
              iterations = n_it)
   
-  
+  message("done")
   lambdas$lagged_g <- lambda(ipm_g_lagged, "pop_size", "stochastic")
   lambdas$lagged_g_all <- list(lambda(ipm_g_lagged, "pop_size", "all"))
   lambdas$g_env_seq <- list(ipm_g_lagged$env_seq)
   
   if(save_K == T) {
-  lambdas$M_g_lagged <- list(ipm_g_lagged$iterators)
+  lambdas$M_g_lagged <- list(ipm_g_lagged$iterators[c((n_it - (n_it * n_save_K)):n_it)])
   }
-  
+  message("done assigning 3rd K kernels")
+
   return(lambdas)
 }
 
