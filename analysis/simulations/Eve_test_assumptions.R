@@ -147,10 +147,11 @@ g_lambda <- lambda$lagged_g
 
 rm(h,i,j)
 
-df <- data.frame(clim_corr, clim_sd,
+df <- tibble(clim_corr, clim_sd,
                  n_lambda, s_lambda, g_lambda,
                  n_corr_sum, s_corr_sum, g_corr_sum,
-                 n_corr_sd, s_corr_sd, g_corr_sd)
+                 n_corr_sd, s_corr_sd, g_corr_sd,
+             n_corr_hist, s_corr_hist, g_corr_hist)
 str(df)
 output
 

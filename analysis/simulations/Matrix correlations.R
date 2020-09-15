@@ -33,58 +33,57 @@ params_list <- list(
 
 source("analysis/simulations/ipmr_functions.R")
 
-
 clim_sd <- rep(seq(from = 0, to = 2, length.out = 10), 30)
 clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 10)
-
-n_corr_sum <- rep(NA, length(clim_sd))
-s_corr_sum <- rep(NA, length(clim_sd))
-g_corr_sum <- rep(NA, length(clim_sd))
-
-n_corr_hist <- as.list(rep(NA, length(clim_sd)))
-s_corr_hist <- as.list(rep(NA, length(clim_sd)))
-g_corr_hist <- as.list(rep(NA, length(clim_sd)))
-
-n_lambda <- rep(NA, length(clim_sd))
-s_lambda <- rep(NA, length(clim_sd))
-g_lambda <- rep(NA, length(clim_sd))
-
-start <- Sys.time()
-start
-
-for (n in c(1:length(clim_sd))) {
-  
-a <-P_lambdas(n_it = 1000, 
-          clim_sd = clim_sd[n], 
-          clim_corr = clim_corr[n], 
-          params_list = params_list, 
-          clim_params = list(s_temp = 1.233, 
+# 
+# n_corr_sum <- rep(NA, length(clim_sd))
+# s_corr_sum <- rep(NA, length(clim_sd))
+# g_corr_sum <- rep(NA, length(clim_sd))
+# 
+# n_corr_hist <- as.list(rep(NA, length(clim_sd)))
+# s_corr_hist <- as.list(rep(NA, length(clim_sd)))
+# g_corr_hist <- as.list(rep(NA, length(clim_sd)))
+# 
+# n_lambda <- rep(NA, length(clim_sd))
+# s_lambda <- rep(NA, length(clim_sd))
+# g_lambda <- rep(NA, length(clim_sd))
+# 
+# start <- Sys.time()
+# start
+# 
+# for (n in c(1:length(clim_sd))) {
+#   
+a <- P_lambdas(n_it = 10000,
+          clim_sd = clim_sd[n],
+          clim_corr = clim_corr[n],
+          params_list = params_list,
+          clim_params = list(s_temp = 1.233,
                              g_temp = 0.066),
           n_mesh = 100,
           save_K = T)
 
-b <- lapply(a$M_non_lagged[[1]][c((0.8*n_it):n_it)], function(x) as.vector(x)) %>% bind_rows %>% t
+b <- lapply(a$M_non_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
 c <- corrr::correlate(b)
 d <- as.matrix(c[,-1])
-n_corr_hist[[n]] <- d
-n_corr_sum[n] <- mean(d, na.rm = T)
-n_lambda[n] <- a$non_lagged
+n_corr_hist <- d #[[n]] <- d
+n_corr_sum <- mean(d, na.rm = T) #[n] <- mean(d, na.rm = T)
+n_lambda<- a$non_lagged #[n] <- a$non_lagged
 
-e <- lapply(a$M_s_lagged[[1]][c((0.8*n_it):n_it)], function(x) as.vector(x)) %>% bind_rows %>% t
+e <- lapply(a$M_s_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
 f <- corrr::correlate(e)
 g <- as.matrix(f[,-1])
-s_corr_hist[[n]] <- g
-s_corr_sum[n] <- mean(g, na.rm = T)
-s_lambda[n] <- a$lagged_s
+s_corr_hist<- g #[[n]] <- g
+s_corr_sum <- mean(g, na.rm = T) #[n] <- mean(g, na.rm = T)
+s_lambda <- a$lagged_s #[n] <- a$lagged_s
 
 h <- lapply(a$M_g_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
 i <- corrr::correlate(h)
 j <- as.matrix(i[,-1])
-g_corr_hist[[n]] <- j
-g_corr_sum[n] <- mean(j, na.rm = T)
-g_lambda[n] <- a$lagged_g
+g_corr_hist  <- j #[[n]] <- j
+g_corr_sum <- mean(j, na.rm = T) #[n] <- mean(j, na.rm = T)
+g_lambda <- a$lagged_g #[n] <- a$lagged_g
 
-}
+# }
 
 Sys.time()
 
