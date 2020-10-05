@@ -59,7 +59,7 @@ taskID
 n_mesh
 n_it
 
-source("/home/evers/lagged_buffering/analysis/simulations/ipmr_functions.R")
+source("/home/evers/lagged_buffering/analysis/simulations/Full simulation/ipmr_functions.R")
 params_list <- read.csv(parameters) 
 params_list <- as.list(setNames(as.numeric(params_list$Value), params_list$Parameter))
 

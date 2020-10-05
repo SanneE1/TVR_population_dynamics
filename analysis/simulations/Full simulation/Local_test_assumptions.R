@@ -2,8 +2,10 @@ library(ipmr)
 library(dplyr)
 library(parallel)
 library(pbapply)
+library(tidyr)
+library(ggplot2)
 
-source("analysis/simulations/ipmr_functions.R")
+source("analysis/simulations/Full simulation/ipmr_functions.R")
 
 params_list <- read.csv("data/simulation/perennial1_HEQU_parameters.csv") 
 params_list <- as.list(setNames(as.numeric(params_list$Value), params_list$Parameter))
