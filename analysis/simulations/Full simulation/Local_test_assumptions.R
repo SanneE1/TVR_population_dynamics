@@ -39,3 +39,19 @@ lambdas <- pblapply(cl = cl,
                                 save_K = F))
 
 stopCluster(cl)
+
+
+data <- lapply(lambdas, function(x) select(x, !matches("_all|_env_seq"))) %>% bind_rows()
+data <- data %>% pivot_longer(cols = contains("lagged"), names_to = "type", values_to = "lambda") %>%
+  select(autocorrelation, clim_sd, type, lambda) %>% filter(!is.na(autocorrelation))
+data$type <- gsub("lagged", "", data$type)
+data$type <- gsub("_", "", data$type)
+
+
+
+ggplot(data) + 
+  geom_smooth(aes(x = clim_sd,
+                  y = lambda, 
+                  color = type), 
+              size = 1) + 
+  facet_grid(rows = vars(autocorrelation))
