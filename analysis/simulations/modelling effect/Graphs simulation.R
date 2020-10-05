@@ -8,19 +8,19 @@ library(ipmr)
 
 source("analysis/simulations/ipmr_functions.R")
 
-P1 <- readRDS("results/simulations/P_1yr_Merged.RDS") %>% select(clim_sd, autocorrelation, non_lagged, lagged)
-P1neg <- readRDS("results/simulations/P_neg_Merged.RDS") %>% select(clim_sd, autocorrelation, non_lagged, lagged)
-P2 <- readRDS("results/simulations/P_2yr_Merged.RDS") %>% select(clim_sd, autocorrelation, non_lagged, lagged)
-PF <- readRDS("results/simulations/PF_1yr_Merged.RDS")
-PF_neg <- readRDS("results/simulations/PF_neg_Merged.RDS")
-
-FP <- PF %>% select(clim_sd, autocorrelation, non_lagged, lagged_F) 
-
-PF <- PF %>% select(clim_sd, autocorrelation, non_lagged, lagged_P) 
-
-FP_neg <- PF_neg %>% select(clim_sd, autocorrelation, non_lagged, lagged_F) 
-
-PF_neg <- PF_neg %>% select(clim_sd, autocorrelation, non_lagged, lagged_P) 
+P1 <- readRDS("results/simulations/P_1yr_Merged.RDS") 
+# P1neg <- readRDS("results/simulations/P_neg_Merged.RDS") %>% select(clim_sd, autocorrelation, non_lagged, lagged)
+# P2 <- readRDS("results/simulations/P_2yr_Merged.RDS") %>% select(clim_sd, autocorrelation, non_lagged, lagged)
+# PF <- readRDS("results/simulations/PF_1yr_Merged.RDS")
+# PF_neg <- readRDS("results/simulations/PF_neg_Merged.RDS")
+# 
+# FP <- PF %>% select(clim_sd, autocorrelation, non_lagged, lagged_F) 
+# 
+# PF <- PF %>% select(clim_sd, autocorrelation, non_lagged, lagged_P) 
+# 
+# FP_neg <- PF_neg %>% select(clim_sd, autocorrelation, non_lagged, lagged_F) 
+# 
+# PF_neg <- PF_neg %>% select(clim_sd, autocorrelation, non_lagged, lagged_P) 
 
 lams <- lapply(list(P1 = P1,
                     P1neg = P1neg, 

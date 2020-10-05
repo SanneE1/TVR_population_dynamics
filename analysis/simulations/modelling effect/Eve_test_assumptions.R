@@ -73,8 +73,8 @@ str(clim_list)
 ## create parameter list -------------------------------------------------------------------------
 
 
-clim_sd <- rep(seq(from = 0, to = 2, length.out = 10), 30)
-clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 10)
+clim_sd <- rep(seq(from = 0, to = 2, length.out = 10), 90)
+clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
 
 clim_sd[taskID]
 clim_corr[taskID]
