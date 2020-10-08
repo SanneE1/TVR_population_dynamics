@@ -122,8 +122,8 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
                     s_temp = clim_params$s_temp,
                     g_temp = clim_params$g_temp,
                     ### get lambda non-lagged ---------------------------------------------------------
-                    no_climate_ipm = lambda(no_climate_ipm, "pop_size", "stochastic"), 
-                    no_climate_ipm_all = list(lambda(no_climate_ipm, "pop_size", "all")),
+                    no_climate_lambda = lambda(no_climate_ipm, "pop_size", "stochastic"), 
+                    no_climate_lambda_all = list(lambda(no_climate_ipm, "pop_size", "all")),
                     n_env_seq = list(no_climate_ipm$env_seq))
   
   message("trying to assign K matrices to tibble")
@@ -214,8 +214,8 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
              iterations = n_it)
   
   message("done")
-  lambdas$ipm_climate <- lambda(ipm_climate, "pop_size", "stochastic")
-  lambdas$ipm_climate <- list(lambda(ipm_climate, "pop_size", "all"))
+  lambdas$climate_lambda <- lambda(ipm_climate, "pop_size", "stochastic")
+  lambdas$climate_lambda_all <- list(lambda(ipm_climate, "pop_size", "all"))
   
   if(save_K == T) {
     lambdas$M_ipm_climate <- list(ipm_climate$iterators[c((n_it - (n_it * n_save_K)):n_it)])
