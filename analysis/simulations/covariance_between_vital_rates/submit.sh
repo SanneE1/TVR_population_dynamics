@@ -8,7 +8,7 @@
 #$ -j y
 
 #Specify job name
-#$ -N ipmr_auto
+#$ -N ipmr_covariance
 
 #Resources
 # max running time
@@ -37,7 +37,7 @@ iterations=$4
 meshpoints=$5
 output="$output_dir"/${JOB_NAME}_${function}_${JOB_ID}_$SGE_TASK_ID.rds
 
-Rscript "$HOME"/lagged_buffering/analysis/simulations/autocorrelation_single_vital_rate/single_autocorrelation.R \
+Rscript "$HOME"/lagged_buffering/analysis/simulations/covariance_between_vital_rates/covariance_between.R \
 --function="$function" \
 --iterations="$iterations" \
 --meshpoints="$meshpoints" \

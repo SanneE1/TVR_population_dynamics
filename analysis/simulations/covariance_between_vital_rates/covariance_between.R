@@ -59,7 +59,7 @@ taskID
 n_mesh
 n_it
 
-source("/home/evers/lagged_buffering/analysis/simulations/covariance between vital rates/ipmr_functions.R")
+source("/home/evers/lagged_buffering/analysis/simulations/covariance_between_vital_rates/ipmr_functions.R")
 params_list <- read.csv(parameters) 
 params_list <- as.list(setNames(as.numeric(params_list$Value), params_list$Parameter))
 
@@ -90,7 +90,7 @@ if(foption == "P_1yr") {
 
 
 print("ipm done")  
-b <- lapply(lambda$M_no_climate_ipm[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
+b <- lapply(lambda$M_no_cov_ipm[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
 print("start corr1")
 c <- corrr::correlate(b)
 print("correlation1 done")
@@ -98,26 +98,26 @@ d <- as.matrix(c[,-1])
 n_corr_hist <- d
 n_corr_sum <- mean(d, na.rm = T)
 n_corr_sd <- sd(d, na.rm = T)
-n_lambda <- lambda$non_lagged
+n_lambda <- lambda$no_cov_lambda
 
 rm(b,c,d)
 
 print("start corr2")
-e <- lapply(lambda$M_ipm_climate[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
+e <- lapply(lambda$M_ipm_cov[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
 print("correlation2 done")
 f <- corrr::correlate(e)
 g <- as.matrix(f[,-1])
-s_corr_hist <- g
-s_corr_sum <- mean(g, na.rm = T)
-s_corr_sd <- sd(g, na.rm = T)
-s_lambda <- lambda$lagged_s
+c_corr_hist <- g
+c_corr_sum <- mean(g, na.rm = T)
+c_corr_sd <- sd(g, na.rm = T)
+c_lambda <- lambda$cov_lambda
 
 
-df <- tibble(clim_corr, clim_sd,
-             n_lambda, s_lambda, g_lambda,
-             n_corr_sum, s_corr_sum, g_corr_sum,
-             n_corr_sd, s_corr_sd, g_corr_sd,
-             n_corr_hist, s_corr_hist, g_corr_hist)
+df <- tibble(clim_corr[taskID], clim_sd[taskID],
+             n_lambda, c_lambda,
+             n_corr_sum, c_corr_sum,
+             n_corr_sd, c_corr_sd,
+             list(n_corr_hist), list(c_corr_hist))
 str(df)
 output
 

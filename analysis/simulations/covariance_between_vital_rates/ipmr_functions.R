@@ -2,8 +2,8 @@
 P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh = 200, save_K = FALSE, n_save_K = 0.1) {
   
   init_pop_vec <- runif(n_mesh)
-  environ_seq <- rnorm_multi(n = n_it, mu = c(0,0), sd = clim_sd, r = clim_corr, varnames = c("surv", "growth")) 
-  
+  environ_seq2 <- rnorm_multi(n = n_it, mu = c(0,0), sd = clim_sd, r = clim_corr, varnames = c("surv", "growth")) 
+  environ_seq1 <- rnorm_multi(n = n_it, mu = c(0,0), sd = clim_sd, r = 0, varnames = c("surv", "growth"))
   params_list <- append(params_list, clim_params)
   
   ## Define environment -------------------------------------------------------------------------
@@ -39,16 +39,16 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
   
   ### set up non-lagged ipm -------------------------------------------------------------------------
   
-  no_climate_ipm <- init_ipm("simple_di_stoch_param") %>%
+  no_cov_ipm <- init_ipm("simple_di_stoch_param") %>%
     define_kernel(
       name = "P",
       
       formula = s * g,
       family = "CC",
       
-      s = inv_logit(s_int + s_slope * log(size_1)),
+      s = inv_logit(s_int + s_slope * log(size_1) + s_temp * surv_clim),
       g = dnorm(size_2, mean = g_mean, sd = g_sd),
-      g_mean = pois(g_int + g_slope * log(size_1)),
+      g_mean = pois(g_int + g_slope * log(size_1) + g_temp * growth_clim),
       
       data_list = params_list,
       states = list(c('size')),
@@ -102,7 +102,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       env_values = env_sampler(environ_seq = environ_seq,
                                iteration = t),
       data_list = list(
-        environ_seq = environ_seq,
+        environ_seq = environ_seq1,
         env_sampler = env_sampler
       )
     ) %>%
@@ -122,23 +122,23 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
                     s_temp = clim_params$s_temp,
                     g_temp = clim_params$g_temp,
                     ### get lambda non-lagged ---------------------------------------------------------
-                    no_climate_lambda = lambda(no_climate_ipm, "pop_size", "stochastic"), 
-                    no_climate_lambda_all = list(lambda(no_climate_ipm, "pop_size", "all")),
-                    n_env_seq = list(no_climate_ipm$env_seq))
+                    no_cov_lambda = lambda(no_cov_ipm, "pop_size", "stochastic"), 
+                    no_cov_lambda_all = list(lambda(no_cov_ipm, "pop_size", "all")),
+                    n_env_seq = list(no_cov_ipm$env_seq))
   
   message("trying to assign K matrices to tibble")
   
   if(save_K == T) {
-    lambdas$M_no_climate_ipm <- list(no_climate_ipm$iterators[c((n_it - (n_it * n_save_K)):n_it)])
+    lambdas$M_no_cov_ipm <- list(no_cov_ipm$iterators[c((n_it - (n_it * n_save_K)):n_it)])
   }
   message("done")
   
   # remove clim_mod object to save memory
-  rm(no_climate_ipm)
+  rm(no_cov_ipm)
   
   ## lagged g ipm ----------------------------------------
   message("starting 2nd ipm")
-  ipm_climate <- init_ipm("simple_di_stoch_param") %>%
+  ipm_cov <- init_ipm("simple_di_stoch_param") %>%
     define_kernel(
       name = "P",
       
@@ -200,7 +200,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       env_params = env_sampler(environ_seq = environ_seq,
                                iteration = t),
       data_list = list(
-        environ_seq = environ_seq,
+        environ_seq = environ_seq2,
         env_sampler = env_sampler
       )
     ) %>%
@@ -214,11 +214,11 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
              iterations = n_it)
   
   message("done")
-  lambdas$climate_lambda <- lambda(ipm_climate, "pop_size", "stochastic")
-  lambdas$climate_lambda_all <- list(lambda(ipm_climate, "pop_size", "all"))
+  lambdas$cov_lambda <- lambda(ipm_cov, "pop_size", "stochastic")
+  lambdas$cov_lambda_all <- list(lambda(ipm_cov, "pop_size", "all"))
   
   if(save_K == T) {
-    lambdas$M_ipm_climate <- list(ipm_climate$iterators[c((n_it - (n_it * n_save_K)):n_it)])
+    lambdas$M_ipm_cov <- list(ipm_cov$iterators[c((n_it - (n_it * n_save_K)):n_it)])
   }
   
   return(lambdas)

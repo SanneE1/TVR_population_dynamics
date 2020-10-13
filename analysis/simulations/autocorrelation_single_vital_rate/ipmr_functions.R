@@ -15,7 +15,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
   
   init_pop_vec <- runif(n_mesh)
   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
-  
+  environ_seq0 <- rnorm(n_it, 0, clim_sd)
   params_list <- append(params_list, clim_params)
   
   ## Define environment -------------------------------------------------------------------------
@@ -50,7 +50,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
   
   ### set up non-lagged ipm -------------------------------------------------------------------------
   
-  no_climate_ipm <- init_ipm("simple_di_stoch_param") %>%
+  no_auto_ipm <- init_ipm("simple_di_stoch_param") %>%
     define_kernel(
       name = "P",
       
@@ -113,7 +113,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       env_values = env_sampler(environ_seq = environ_seq,
                                iteration = t),
       data_list = list(
-        environ_seq = environ_seq,
+        environ_seq = environ_seq0,
         env_sampler = env_sampler
       )
     ) %>%
@@ -133,23 +133,23 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
                     s_temp = clim_params$s_temp,
                     g_temp = clim_params$g_temp,
                     ### get lambda non-lagged ---------------------------------------------------------
-                    no_climate_lambda = lambda(no_climate_ipm, "pop_size", "stochastic"), 
-                    no_climate_lambda_all = list(lambda(no_climate_ipm, "pop_size", "all")),
-                    n_env_seq = list(no_climate_ipm$env_seq))
+                    no_auto_lambda = lambda(no_auto_ipm, "pop_size", "stochastic"), 
+                    no_auto_lambda_all = list(lambda(no_auto_ipm, "pop_size", "all")),
+                    n_env_seq = list(no_auto_ipm$env_seq))
 
   message("trying to assign K matrices to tibble")
 
   if(save_K == T) {
-  lambdas$M_no_climate_ipm <- list(no_climate_ipm$iterators[c((n_it - (n_it * n_save_K)):n_it)])
+  lambdas$M_no_auto_ipm <- list(no_auto_ipm$iterators[c((n_it - (n_it * n_save_K)):n_it)])
   }
   message("done")
 
   # remove clim_mod object to save memory
-  rm(no_climate_ipm)
+  rm(no_auto_ipm)
   
   ## lagged g ipm ----------------------------------------
   message("starting 2nd ipm")
-  ipm_g_climate <- init_ipm("simple_di_stoch_param") %>%
+  ipm_g_auto <- init_ipm("simple_di_stoch_param") %>%
     define_kernel(
       name = "P",
       
@@ -225,11 +225,11 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
              iterations = n_it)
   
   message("done")
-  lambdas$ipm_g_lambda <- lambda(ipm_g_climate, "pop_size", "stochastic")
-  lambdas$ipm_g_lambda_all <- list(lambda(ipm_g_climate, "pop_size", "all"))
+  lambdas$ipm_g_auto_lambda <- lambda(ipm_g_auto, "pop_size", "stochastic")
+  lambdas$ipm_g_auto_lambda_all <- list(lambda(ipm_g_auto, "pop_size", "all"))
 
   if(save_K == T) {
-  lambdas$M_ipm_g_climate <- list(ipm_g_climate$iterators[c((n_it - (n_it * n_save_K)):n_it)])
+  lambdas$M_ipm_g_auto <- list(ipm_g_auto$iterators[c((n_it - (n_it * n_save_K)):n_it)])
   }
 
   return(lambdas)

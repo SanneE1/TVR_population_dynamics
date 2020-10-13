@@ -15,10 +15,10 @@
 
 
 # memory per core (hard limit)
-#$ -l h_vmem=40G
+#$ -l h_vmem=10G
 
 # Array numbers 
-#$ -t 1-960
+#$ -t 1-300
 
 #needed when submitting a non-parallel job
 #$ -binding linear:1
