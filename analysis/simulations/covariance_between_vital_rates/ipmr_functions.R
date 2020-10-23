@@ -2,8 +2,10 @@
 P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh = 200, save_K = FALSE, n_save_K = 0.1) {
   
   init_pop_vec <- runif(n_mesh)
-  environ_seq2 <- rnorm_multi(n = n_it, mu = c(0,0), sd = clim_sd, r = clim_corr, varnames = c("surv", "growth")) 
+  
   environ_seq1 <- rnorm_multi(n = n_it, mu = c(0,0), sd = clim_sd, r = 0, varnames = c("surv", "growth"))
+  environ_seq2 <- rnorm_multi(n = n_it, mu = c(0,0), sd = clim_sd, r = clim_corr, varnames = c("surv", "growth")) 
+  
   params_list <- append(params_list, clim_params)
   
   ## Define environment -------------------------------------------------------------------------
