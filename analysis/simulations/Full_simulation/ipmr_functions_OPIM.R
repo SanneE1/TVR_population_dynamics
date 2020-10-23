@@ -78,7 +78,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       
       fp = inv_logit(fp_int + fp_slope * log(size_1)),
       fn = rnorm(1, mean = fn_int, sd = fn_slope),
-      germ = germ_mean,
+      germ = inv_logit(germ_mean),
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
       data_list = params_list,
@@ -178,7 +178,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       
       fp = inv_logit(fp_int + fp_slope * log(size_1)),
       fn = rnorm(1, mean = fn_int, sd = fn_slope),
-      germ = germ_mean,
+      germ = inv_logit(germ_mean),
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
       data_list = params_list,
@@ -224,7 +224,8 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
     ) %>%
     make_ipm(usr_funs = my_functions, 
              iterate = T, 
-             iterations = n_it)
+             iterations = n_it,
+             report_progress = T)
   
   message("done")
   lambdas$lagged_s <- lambda(ipm_s_lagged, "pop_size", "stochastic")
@@ -268,7 +269,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       
       fp = inv_logit(fp_int + fp_slope * log(size_1)),
       fn = rnorm(1, mean = fn_int, sd = fn_slope),
-      germ = germ_mean,
+      germ = inv_logit(germ_mean),
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
       data_list = params_list,
@@ -314,7 +315,8 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
     ) %>%
     make_ipm(usr_funs = my_functions, 
              iterate = T, 
-             iterations = n_it)
+             iterations = n_it,
+             report_progress = T)
   
   message("done")
   lambdas$lagged_g <- lambda(ipm_g_lagged, "pop_size", "stochastic")

@@ -86,80 +86,65 @@ clim_sd[taskID]
 clim_corr[taskID]
 
 message("Within P kernel 1 year lagged")
-  lambda <- P_lambdas(n_it = n_it, 
-                  clim_sd = clim_sd[taskID], 
-                  clim_corr = clim_corr[taskID], 
-                  params_list = params_list, 
-                  clim_params = clim_list,
-                  n_mesh = n_mesh,
-                  save_K = T)
+lambda <- P_lambdas(n_it = n_it, 
+                    clim_sd = clim_sd[taskID], 
+                    clim_corr = clim_corr[taskID], 
+                    params_list = params_list, 
+                    clim_params = clim_list,
+                    n_mesh = n_mesh,
+                    save_K = T)
   
  
 
 
-if(foption == "PF_1yr") {
-  lambda <- PF_lambdas(n_it = 10000, 
-                       clim_sd = clim_sd[taskID], 
-                       clim_corr = clim_corr[taskID], 
-                       params_list = params_list, 
-                       clim_params = list(s_temp = 1.233, 
-                                          g_temp = -0.066,
-                                          fpC_temp = -0.617,
-                                          fnC_temp = -0.34))
-}
-
-if(foption == "P_2yr") {
-  lambda <- P_2yr(n_it = 10000, 
-                  clim_sd = clim_sd[taskID], 
-                  clim_corr = clim_corr[taskID])
-} 
 
 
 print("ipm done")  
+
 lambda
 
-b <- lapply(lambda$M_non_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
-str(b)
-print("start corr1")
-c <- corrr::correlate(b)
-print("correlation1 done")
-d <- as.matrix(c[,-1])
-n_corr_hist <- d
-n_corr_sum <- mean(d, na.rm = T)
-n_corr_sd <- sd(d, na.rm = T)
+# b <- lapply(lambda$M_non_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
+# str(b)
+# print("start corr1")
+# c <- corrr::correlate(b)
+# print("correlation1 done")
+# d <- as.matrix(c[,-1])
+# n_corr_hist <- d
+# n_corr_sum <- mean(d, na.rm = T)
+# n_corr_sd <- sd(d, na.rm = T)
 n_lambda <- lambda$non_lagged
 
-rm(b,c,d)
+# rm(b,c,d)
 
-print("start corr2")
-e <- lapply(lambda$M_s_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
-print("correlation2 done")
-f <- corrr::correlate(e)
-g <- as.matrix(f[,-1])
-s_corr_hist <- g
-s_corr_sum <- mean(g, na.rm = T)
-s_corr_sd <- sd(g, na.rm = T)
+# print("start corr2")
+# e <- lapply(lambda$M_s_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
+# print("correlation2 done")
+# f <- corrr::correlate(e)
+# g <- as.matrix(f[,-1])
+# s_corr_hist <- g
+# s_corr_sum <- mean(g, na.rm = T)
+# s_corr_sd <- sd(g, na.rm = T)
 s_lambda <- lambda$lagged_s
 
-rm(e,f,g)
+# rm(e,f,g)
 
-h <- lapply(lambda$M_g_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
-print("start corr3")
-i <- corrr::correlate(h)
-print("correlation3 done")
-j <- as.matrix(i[,-1])
-g_corr_hist <- j
-g_corr_sum <- mean(j, na.rm = T)
-g_corr_sd <- sd(j, na.rm = T)
+# h <- lapply(lambda$M_g_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
+# print("start corr3")
+# i <- corrr::correlate(h)
+# print("correlation3 done")
+# j <- as.matrix(i[,-1])
+# g_corr_hist <- j
+# g_corr_sum <- mean(j, na.rm = T)
+# g_corr_sd <- sd(j, na.rm = T)
 g_lambda <- lambda$lagged_g
 
-rm(h,i,j)
+# rm(h,i,j)
 
 df <- tibble(clim_corr[taskID], clim_sd[taskID],
-                 n_lambda, s_lambda, g_lambda,
-                 n_corr_sum, s_corr_sum, g_corr_sum,
-                 n_corr_sd, s_corr_sd, g_corr_sd,
-             list(n_corr_hist), list(s_corr_hist), list(g_corr_hist))
+                 n_lambda, s_lambda, g_lambda) #,
+             #     n_corr_sum, s_corr_sum, g_corr_sum,
+             #     n_corr_sd, s_corr_sd, g_corr_sd,
+             # list(n_corr_hist), list(s_corr_hist), list(g_corr_hist))
 str(df)
 output
 
