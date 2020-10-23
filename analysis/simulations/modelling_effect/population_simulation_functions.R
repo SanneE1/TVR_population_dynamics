@@ -206,7 +206,7 @@ simulate <- function(init.pop.size, n_yrs, clim_sd, clim_corr) {
 
 ## calculate vr models from simulated dataset
 #using lagged climate for growth
-bayes_vr_lagged <- function(data, n_sample = 50) {
+bayes_vr_lagged <- function(data, n_sample = 100) {
   
   set_ulam_cmdstan(TRUE)
   
@@ -269,7 +269,7 @@ bayes_vr_lagged <- function(data, n_sample = 50) {
       fd_int ~ dnorm(0,1),
       fd_sd ~ dexp(1)
       
-    ), data = data_mod, log_lik = T,
+    ), data = data_mod, chains = 1, iter=5000, log_lik = T
   )
   
   
@@ -278,8 +278,10 @@ bayes_vr_lagged <- function(data, n_sample = 50) {
   return(params)
   
 }
+
+
 # using recent climate for growth
-bayes_vr_recent <- function(sim.data, n_sample = 50) {
+bayes_vr_recent <- function(data, n_sample = 100) {
   
   set_ulam_cmdstan(TRUE)
   
@@ -306,7 +308,6 @@ bayes_vr_recent <- function(sim.data, n_sample = 50) {
     n_seeds_t = data$df$n_seeds.t[[1]],
     z_new = data$df$z_new[[1]]
   )
-  
   
   recent_vr <- ulam(
     alist(
@@ -342,7 +343,7 @@ bayes_vr_recent <- function(sim.data, n_sample = 50) {
       fd_int ~ dnorm(0,1),
       fd_sd ~ dexp(1)
       
-    ), data = data_mod, chains = 4, cores = 4, iter=5000, log_lik = T,
+    ), data = data_mod, chains = 1, iter=5000, log_lik = T
   )
   
   
