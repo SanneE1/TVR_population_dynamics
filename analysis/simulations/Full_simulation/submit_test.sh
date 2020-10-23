@@ -28,7 +28,7 @@ output_dir="/work/$USER/$JOB_NAME-$JOB_ID"
 mkdir -p "$output_dir"
 
 
-module load foss/2018b R/3.5.1
+module load foss/2019b R
 
 function=$1
 params=$2
@@ -37,7 +37,7 @@ iterations=$4
 meshpoints=$5
 output="$output_dir"/${JOB_NAME}_${function}_${JOB_ID}_$SGE_TASK_ID.rds
 
-Rscript "$HOME"/lagged_buffering/analysis/simulations/Full simulation/Eve_test_assumptions.R \
+Rscript "$HOME"/lagged_buffering/analysis/simulations/Full_simulation/Eve_test_assumptions.R \
 --function="$function" \
 --iterations="$iterations" \
 --meshpoints="$meshpoints" \

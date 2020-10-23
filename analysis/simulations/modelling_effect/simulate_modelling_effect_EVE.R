@@ -22,7 +22,7 @@ taskID <- as.integer(Sys.getenv("SGE_TASK_ID"))
 taskID
 
 
-source("/home/evers/lagged_buffering/analysis/simulations/modelling effect/population_simulation_functions.R")
+source("/home/evers/lagged_buffering/analysis/simulations/modelling_effect/population_simulation_functions.R")
 
 clim_sd <- rep(c(1:2), 50)
 clim_cor <- rep(seq(from = -0.9, to = 0.9, length.out = 5), each = 20)

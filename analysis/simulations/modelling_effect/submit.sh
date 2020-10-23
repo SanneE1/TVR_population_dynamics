@@ -29,7 +29,7 @@ mkdir -p "$output_dir"
 
 module load foss/2018b R/3.5.1
 
-output="$output_dir"/${JOB_NAME}_${function}_${JOB_ID}_$SGE_TASK_ID.rds
+output="$output_dir"/${JOB_NAME}_${JOB_ID}_$SGE_TASK_ID.rds
 
 
 Rscript "$HOME"/lagged_buffering/analysis/simulations/modelling effect/simulate_modelling_effect_EVE.R \

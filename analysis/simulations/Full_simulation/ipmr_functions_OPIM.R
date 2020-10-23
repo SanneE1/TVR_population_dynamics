@@ -77,7 +77,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       family = "CC",
       
       fp = inv_logit(fp_int + fp_slope * log(size_1)),
-      fn = rnorm(mean = fn_int, sd = fn_slope),
+      fn = rnorm(1, mean = fn_int, sd = fn_slope),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
@@ -177,7 +177,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       family = "CC",
       
       fp = inv_logit(fp_int + fp_slope * log(size_1)),
-      fn = rnorm(mean = fn_int, sd = fn_slope),
+      fn = rnorm(1, mean = fn_int, sd = fn_slope),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
@@ -267,7 +267,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       family = "CC",
       
       fp = inv_logit(fp_int + fp_slope * log(size_1)),
-      fn = rnorm(mean = fn_int, sd = fn_slope),
+      fn = rnorm(1, mean = fn_int, sd = fn_slope),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       

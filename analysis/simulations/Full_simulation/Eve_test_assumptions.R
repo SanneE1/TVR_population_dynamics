@@ -17,8 +17,8 @@ Parsoptions <- list (
   make_option(
     opt_str = c("-f", "--function"),
     dest    = "foption",
-    help    = "Specify the ipmr function to use",
-    metavar = "P_1yr|P_neg_1yr|P_2yr|PF_1yr|PF_neg_1yr"),
+    help    = "Specify the ipmr function (based on HEQU or OPIM) to use",
+    metavar = "HEQU|OPIM"),
   
   make_option(
     opt_str = c("-i", "--iterations"),
@@ -59,7 +59,13 @@ taskID
 n_mesh
 n_it
 
-source("/home/evers/lagged_buffering/analysis/simulations/Full simulation/ipmr_functions.R")
+if(foption == "HEQU"){
+source("/home/evers/lagged_buffering/analysis/simulations/Full_simulation/ipmr_functions.R")
+}
+if(foption == "OPIM") {
+source("/home/evers/lagged_buffering/analysis/simulations/Full_simulation/ipmr_functions_OPIM.R")
+}
+
 params_list <- read.csv(parameters) 
 params_list <- as.list(setNames(as.numeric(params_list$Value), params_list$Parameter))
 
@@ -79,8 +85,7 @@ clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
 clim_sd[taskID]
 clim_corr[taskID]
 
-if(foption == "P_1yr") {
-  message("Within P kernel 1 year lagged")
+message("Within P kernel 1 year lagged")
   lambda <- P_lambdas(n_it = n_it, 
                   clim_sd = clim_sd[taskID], 
                   clim_corr = clim_corr[taskID], 
@@ -89,7 +94,7 @@ if(foption == "P_1yr") {
                   n_mesh = n_mesh,
                   save_K = T)
   
-} 
+ 
 
 
 if(foption == "PF_1yr") {

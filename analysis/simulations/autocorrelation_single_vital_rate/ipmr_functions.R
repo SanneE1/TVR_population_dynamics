@@ -59,7 +59,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       
       s = inv_logit(s_int + s_slope * log(size_1)),
       g = dnorm(size_2, mean = g_mean, sd = g_sd),
-      g_mean = pois(g_int + g_slope * log(size_1)),
+      g_mean = pois(g_int + g_slope * log(size_1) + g_temp * temp0),
       
       data_list = params_list,
       states = list(c('size')),
