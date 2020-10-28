@@ -60,7 +60,7 @@ n_mesh
 n_it
 
 if(foption == "HEQU"){
-source("/home/evers/lagged_buffering/analysis/simulations/Full_simulation/ipmr_functions.R")
+source("/home/evers/lagged_buffering/analysis/simulations/Full_simulation/ipmr_functions_HEQU.R")
 }
 if(foption == "OPIM") {
 source("/home/evers/lagged_buffering/analysis/simulations/Full_simulation/ipmr_functions_OPIM.R")
