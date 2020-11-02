@@ -57,9 +57,9 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       formula = s * g,
       family = "CC",
       
-      s = inv_logit(s_int + s_slope * log(size_1)),
+      s = inv_logit(s_int + s_slope * size_1),
       g = dnorm(size_2, mean = g_mean, sd = g_sd),
-      g_mean = g_int + g_slope * log(size_1) + g_temp * temp0,
+      g_mean = g_int + g_slope * size_1 + g_temp * temp0,
       
       data_list = params_list,
       states = list(c('size')),
@@ -75,8 +75,8 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       formula = fp * fn * seed * germ * fd,
       family = "CC",
       
-      fp = inv_logit(fp_int + fp_slope * log(size_1)),
-      fn = pois(fn_int + fn_slope * log(size_1)),
+      fp = inv_logit(fp_int + fp_slope * size_1),
+      fn = pois(fn_int + fn_slope * size_1),
       seed = rnorm(1, mean = seed_mean, sd = seed_sd),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
@@ -158,9 +158,9 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       formula = s * g,
       family = "CC",
       
-      s = inv_logit(s_int + s_slope * log(size_1)),
+      s = inv_logit(s_int + s_slope * size_1),
       g = dnorm(size_2, mean = g_mean, sd = g_sd),
-      g_mean = g_int + g_slope * log(size_1)  + g_temp * temp0,
+      g_mean = g_int + g_slope * size_1  + g_temp * temp0,
       
       data_list = params_list,
       states = list(c('size')),
@@ -176,8 +176,8 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       formula = fp * fn * seed * germ * fd,
       family = "CC",
       
-      fp = inv_logit(fp_int + fp_slope * log(size_1)),
-      fn = pois(fn_int + fn_slope * log(size_1)),
+      fp = inv_logit(fp_int + fp_slope * size_1),
+      fn = pois(fn_int + fn_slope * size_1),
       seed = rnorm(1, mean = seed_mean, sd = seed_sd),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
@@ -285,9 +285,9 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
 #       formula = s * g,
 #       family = "CC",
 #       
-#       s = inv_logit(s_int + s_slope * log(size_1) + s_temp * temp0),
+#       s = inv_logit(s_int + s_slope * size_1 + s_temp * temp0),
 #       g = dnorm(size_2, mean = g_mean, sd = g_sd),
-#       g_mean = pois(g_int + g_slope * log(size_1)  + g_temp * temp0),
+#       g_mean = pois(g_int + g_slope * size_1  + g_temp * temp0),
 #       
 #       data_list = params_list,
 #       states = list(c('size')),
@@ -303,8 +303,8 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
 #       formula = fp * fn * germ * fd,
 #       family = "CC",
 #       
-#       fp = inv_logit(fpC_int + fpC_slope * log(size_1) + fpC_temp * temp0),
-#       fn = pois(fnC_int + fnC_slope * log(size_1) + fnC_temp * temp0),
+#       fp = inv_logit(fpC_int + fpC_slope * size_1 + fpC_temp * temp0),
+#       fn = pois(fnC_int + fnC_slope * size_1 + fnC_temp * temp0),
 #       germ = germ_mean,
 #       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
 #       
@@ -377,9 +377,9 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
 #       formula = s * g,
 #       family = "CC",
 #       
-#       s = inv_logit(s_int + s_slope * log(size_1) + s_temp * temp1),
+#       s = inv_logit(s_int + s_slope * size_1 + s_temp * temp1),
 #       g = dnorm(size_2, mean = g_mean, sd = g_sd),
-#       g_mean = pois(g_int + g_slope * log(size_1)  + g_temp * temp1),
+#       g_mean = pois(g_int + g_slope * size_1  + g_temp * temp1),
 #       
 #       data_list = params_list,
 #       states = list(c('size')),
@@ -395,8 +395,8 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
 #       formula = fp * fn * germ * fd,
 #       family = "CC",
 #       
-#       fp = inv_logit(fpC_int + fpC_slope * log(size_1) + fpC_temp * temp0),
-#       fn = pois(fnC_int + fnC_slope * log(size_1) + fnC_temp * temp0),
+#       fp = inv_logit(fpC_int + fpC_slope * size_1 + fpC_temp * temp0),
+#       fn = pois(fnC_int + fnC_slope * size_1 + fnC_temp * temp0),
 #       germ = germ_mean,
 #       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
 #       
@@ -461,9 +461,9 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
 #       formula = s * g,
 #       family = "CC",
 #       
-#       s = inv_logit(s_int + s_slope * log(size_1) + s_temp * temp0),
+#       s = inv_logit(s_int + s_slope * size_1 + s_temp * temp0),
 #       g = dnorm(size_2, mean = g_mean, sd = g_sd),
-#       g_mean = pois(g_int + g_slope * log(size_1)  + g_temp * temp0),
+#       g_mean = pois(g_int + g_slope * size_1  + g_temp * temp0),
 #       
 #       data_list = params_list,
 #       states = list(c('size')),
@@ -479,8 +479,8 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
 #       formula = fp * fn * germ * fd,
 #       family = "CC",
 #       
-#       fp = inv_logit(fpC_int + fpC_slope * log(size_1) + fpC_temp * temp1),
-#       fn = pois(fnC_int + fnC_slope * log(size_1) + fnC_temp * temp1),
+#       fp = inv_logit(fpC_int + fpC_slope * size_1 + fpC_temp * temp1),
+#       fn = pois(fnC_int + fnC_slope * size_1 + fnC_temp * temp1),
 #       germ = germ_mean,
 #       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
 #       
