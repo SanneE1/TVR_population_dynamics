@@ -103,48 +103,34 @@ print("ipm done")
 
 lambda
 
-# b <- lapply(lambda$M_non_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
-# str(b)
-# print("start corr1")
-# c <- corrr::correlate(b)
-# print("correlation1 done")
-# d <- as.matrix(c[,-1])
-# n_corr_hist <- d
-# n_corr_sum <- mean(d, na.rm = T)
-# n_corr_sd <- sd(d, na.rm = T)
 n_lambda <- lambda$non_lagged
+n_lambda_till <- 0
 
-# rm(b,c,d)
+if(is.nan(n_lambda)){
+n_lambda_till <- which(is.nan(lambdas$non_lagged_all[[1]]))
+n_lambda <- lambda$non_lagged_all[[1]][c(2:(which(is.nan(lambdas$non_lagged_all[[1]]))[1]-1))] %>% mean %>% log
+}
 
-# print("start corr2")
-# e <- lapply(lambda$M_s_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
-# print("correlation2 done")
-# f <- corrr::correlate(e)
-# g <- as.matrix(f[,-1])
-# s_corr_hist <- g
-# s_corr_sum <- mean(g, na.rm = T)
-# s_corr_sd <- sd(g, na.rm = T)
 s_lambda <- lambda$lagged_s
+s_lambda_till <- 0
 
-# rm(e,f,g)
+if(is.nan(n_lambda)){
+s_lambda_till <- which(is.nan(lambdas$lagged_s_all[[1]]))
+s_lambda <- lambda$lagged_s_all[[1]][c(2:(which(is.nan(lambdas$lagged_s_all[[1]]))[1]-1))] %>% mean %>% log
+}
 
-# h <- lapply(lambda$M_g_lagged[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
-# print("start corr3")
-# i <- corrr::correlate(h)
-# print("correlation3 done")
-# j <- as.matrix(i[,-1])
-# g_corr_hist <- j
-# g_corr_sum <- mean(j, na.rm = T)
-# g_corr_sd <- sd(j, na.rm = T)
 g_lambda <- lambda$lagged_g
+g_lambda_till <- 0
 
-# rm(h,i,j)
+if(is.nan(n_lambda)){
+g_lambda_till <- which(is.nan(lambdas$lagged_g_all[[1]]))
+g_lambda <- lambda$lagged_g_all[[1]][c(2:(which(is.nan(lambdas$lagged_g_all[[1]]))[1]-1))] %>% mean %>% log
+}
+
 
 df <- tibble(clim_corr[taskID], clim_sd[taskID],
-                 n_lambda, s_lambda, g_lambda) #,
-             #     n_corr_sum, s_corr_sum, g_corr_sum,
-             #     n_corr_sd, s_corr_sd, g_corr_sd,
-             # list(n_corr_hist), list(s_corr_hist), list(g_corr_hist))
+                 n_lambda, s_lambda, g_lambda,
+                 n_lambda_till, s_lambda_till, g_lambda_till)
 str(df)
 output
 
