@@ -32,7 +32,7 @@ str(df)
 strings <- stringr::str_split(list.files(output)[1], "[[:punct:]]")
 strings 
 
-out.file = paste(output,strings[[1]][3],"_", strings[[1]][4], "_", "Merged.RDS", sep = "")
+out.file = paste(output,strings[[1]][2],"_", strings[[1]][3], "_", "Merged.RDS", sep = "")
 #out.file1 = paste(output,strings[[1]][3],"_", strings[[1]][4], "_", "Hist.RDS", sep = "")
 
 out.file 
