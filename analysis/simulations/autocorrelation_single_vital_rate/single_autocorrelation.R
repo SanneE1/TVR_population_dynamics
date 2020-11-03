@@ -89,7 +89,7 @@ lambda <- P_lambdas(n_it = n_it,
                     params_list = params_list, 
                     clim_params = clim_list,
                     n_mesh = n_mesh,
-                    save_K = T)
+                    save_K = F)
 
 
 

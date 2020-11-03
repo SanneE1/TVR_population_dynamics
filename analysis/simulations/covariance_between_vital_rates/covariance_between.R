@@ -90,7 +90,7 @@ lambda <- P_lambdas(n_it = n_it,
                     params_list = params_list, 
                     clim_params = clim_list,
                     n_mesh = n_mesh,
-                    save_K = T)
+                    save_K = F)
 
 print("ipm done")  
 # b <- lapply(lambda$M_no_cov_ipm[[1]], function(x) as.vector(x)) %>% bind_rows %>% t

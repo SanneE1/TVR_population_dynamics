@@ -1,11 +1,12 @@
 
 create_seq <- function(n_it, clim_sd, clim_corr) { 
-  for(n in c(1:(n_it+5))) 
+  for(n in c(1:(n_it+5))){ 
     if(n == 1) {
       seq <- rnorm(1)
     } else {
       seq[n] <- clim_corr * seq[n-1] + rnorm(1)
     }
+  }
   seq <- scale(seq) * clim_sd
   return(seq)
 }
@@ -78,7 +79,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       
       fp = inv_logit(fp_int + fp_slope * log(size_1)),
       fn = pois(fn_int + fn_slope * log(size_1)),
-      seed = dnorm(1, seed_int, seed_size),
+      seed = dnorm(1, seed_mean, seed_sd),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
@@ -179,7 +180,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       
       fp = inv_logit(fp_int + fp_slope * log(size_1)),
       fn = pois(fn_int + fn_slope * log(size_1)),
-      seed = dnorm(1, seed_int, seed_size),
+      seed = rnorm(1, seed_mean, seed_sd),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
@@ -270,7 +271,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       
       fp = inv_logit(fp_int + fp_slope * log(size_1)),
       fn = pois(fn_int + fn_slope * log(size_1)),
-      seed = dnorm(1, seed_int, seed_size),
+      seed = rnorm(1, seed_mean, seed_sd),
       germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       

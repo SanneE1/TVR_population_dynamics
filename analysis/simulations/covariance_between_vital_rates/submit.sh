@@ -15,7 +15,7 @@
 
 
 # memory per core (hard limit)
-#$ -l h_vmem=40G
+#$ -l h_vmem=8G
 
 # Array numbers 
 #$ -t 1-900
