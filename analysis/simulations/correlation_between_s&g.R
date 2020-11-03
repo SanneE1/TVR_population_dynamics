@@ -3,6 +3,7 @@ library(faux)
 library(parallel)
 library(pbapply)
 library(patchwork)
+library(ggplot2)
 
 #------------------------------------
 # IPM functions
@@ -87,57 +88,57 @@ fec <- function(z1, z, pars) {
 #------------------------------------
 
 # HEQU based
-# pars <- data.frame(species = "H",
-#                    s_int = -0.229,
-#                    s_size = 1.077,
-#                    s_temp = 1.233,
-#                    g_int = 0.424,
-#                    g_size = 0.846,
-#                    g_temp = -0.066,
-#                    g_sd = 1.076,
-#                    fp_int = -3.970,
-#                    fp_size = 1.719,
-#                    fd_int = 1.178749,
-#                    fd_sd = 0.76,
-#                    fn_int = -0.646,
-#                    fn_size = 0.705,
-#                    seed_int = 60.4,
-#                    seed_size = 5,
-#                    germ_int = 0.00229,
-#                    germ_sd = 0.00444,
-# 
-#                    mat_siz = 100,
-#                    L = 1,
-#                    U = 115
-# 
-# )
+pars <- data.frame(species = "H",
+                   s_int = -0.229,
+                   s_size = 1.077,
+                   s_temp = 1.233,
+                   g_int = 0.424,
+                   g_size = 0.846,
+                   g_temp = -0.066,
+                   g_sd = 1.076,
+                   fp_int = -3.970,
+                   fp_size = 1.719,
+                   fd_int = 1.178749,
+                   fd_sd = 0.76,
+                   fn_int = -0.646,
+                   fn_size = 0.705,
+                   seed_int = 60.4,
+                   seed_size = 5,
+                   germ_int = 0.00229,
+                   germ_sd = 0.00444,
+
+                   mat_siz = 100,
+                   L = 1,
+                   U = 115
+
+)
 
 
 # # OPIM based
-pars <- data.frame(species = "O",
-                   s_int = 0.384,
-                   s_size = 0.381,
-                   s_temp = -0.4,
-                   g_int = 0.435,
-                   g_size = 0.955,
-                   g_temp = -0.746,
-                   g_sd = 0.2,
-                   fp_int = -18.996,
-                   fp_size = 1.731,
-                   fd_int = -3.25,
-                   fd_sd = 0.77,
-                   fn_int = -6.738,
-                   fn_size = 0.771,
-                   seed_int = 139.5,
-                   seed_size = 10.6,
-                   germ_int = 0.0314,
-                   germ_sd = 0.21,
-
-                   mat_siz = 100,
-                   L = -3.8,
-                   U = 18
-
-)
+# pars <- data.frame(species = "O",
+#                    s_int = 0.384,
+#                    s_size = 0.381,
+#                    s_temp = -0.4,
+#                    g_int = 0.435,
+#                    g_size = 0.955,
+#                    g_temp = -0.746,
+#                    g_sd = 0.2,
+#                    fp_int = -18.996,
+#                    fp_size = 1.731,
+#                    fd_int = -3.25,
+#                    fd_sd = 0.77,
+#                    fn_int = -6.738,
+#                    fn_size = 0.771,
+#                    seed_int = 139.5,
+#                    seed_size = 10.6,
+#                    germ_int = 0.0314,
+#                    germ_sd = 0.21,
+# 
+#                    mat_siz = 100,
+#                    L = -3.8,
+#                    U = 18
+# 
+# )
 
 #------------------------------------
 # IPM kernels
@@ -266,9 +267,9 @@ lambdas <- pblapply(as.list(rep(c(-0.9,0,0.9), 30)), calc_corr_lambda, cl = cl) 
 stopCluster(cl)
 
 saveRDS(lambdas, 
-        file = paste("results/simulations/correlation_between_s&g_", pars$species, ".rds", sep = ""))
+        file = paste("results/simulations/Between_s&g/correlation_between_s&g_", pars$species, ".rds", sep = ""))
 
-lambdas <- readRDS(paste("results/simulations/correlation_between_s&g_", pars$species, ".rds", sep = ""))
+lambdas <- readRDS(paste("results/simulations/Between_s&g/correlation_between_s&g_", pars$species, ".rds", sep = ""))
 
 
 mat_cor <- matrix(0, (pars$mat_siz), (pars$mat_siz))
@@ -308,9 +309,9 @@ names(variance_s) <- c("neg", "zero", "pos")
 names(variance_g) <- c("neg", "zero", "pos")
 names(covariance) <- c("neg", "zero", "pos")
 
-saveRDS(correlations, file = paste("results/simulations/correlation_between_s&g_", pars$species, "correlation.rds", sep = ""))
-save(variance_s, variance_g, file = paste("results/simulations/correlation_between_s&g_", pars$species, "variance.RData", sep = ""))
-saveRDS(covariance, file = paste("results/simulations/correlation_between_s&g_", pars$species, "covariance.rds", sep = ""))
+saveRDS(correlations, file = paste("results/simulations/Between_s&g/correlation_between_s&g_", pars$species, "correlation.rds", sep = ""))
+save(variance_s, variance_g, file = paste("results/simulations/Between_s&g/correlation_between_s&g_", pars$species, "variance.RData", sep = ""))
+saveRDS(covariance, file = paste("results/simulations/Between_s&g/correlation_between_s&g_", pars$species, "covariance.rds", sep = ""))
 
 
 #--------------------------------------------------------
@@ -327,7 +328,7 @@ lam <- ggplot(lambdas, aes(x = as.factor(clim_cov), y = lambda)) +
           subtitle = "with a climate sd of 2") 
 
 
-ggsave(filename = paste("results/simulations/correlation_between_s&g_", pars$species, "_lambdas.png", sep = ""), 
+ggsave(filename = paste("results/simulations/Between_s&g/correlation_between_s&g_", pars$species, "_lambdas.png", sep = ""), 
        lam)
 
 #--------------------------------------------------------
@@ -345,7 +346,7 @@ df <- data.frame("Climate correlation" = c("-0.9", "0", "0.9"),
 a <- lapply(correlations, function(x) x %>% 
               as_tibble %>% 
               tibble::rowid_to_column(var = "X") %>% 
-              gather(key = "Y", value = "corr", -1) %>%
+              tidyr::gather(key = "Y", value = "corr", -1) %>%
               mutate(Y = as.numeric(gsub("V", "", Y))) %>%
               ggplot(aes(X, Y, fill = corr)) + geom_tile() + 
               scale_fill_gradientn(colours = c("blue", "white", "red")) +
@@ -358,7 +359,7 @@ plot_cor <- ((a$neg + ggtitle("-0.9")) +
   plot_annotation(title = "Correlation between survivial and growth kernels",
                   subtitle = "with climate covariance")
 
-ggsave(filename = paste("results/simulations/correlation_between_s&g_", pars$species, "_correlation.png", sep = ""), 
+ggsave(filename = paste("results/simulations/Between_s&g/correlation_between_s&g_", pars$species, "_correlation.png", sep = ""), 
        plot_cor, width = 18, height = 7)
 
 
@@ -386,7 +387,7 @@ df_g <- data.frame("Climate correlation" = c("-0.9", "0", "0.9"),
 b <- lapply(variance_s, function(x) x %>% 
               as_tibble %>% 
               tibble::rowid_to_column(var = "X") %>% 
-              gather(key = "Y", value = "var", -1) %>%
+              tidyr::gather(key = "Y", value = "var", -1) %>%
               mutate(Y = as.numeric(gsub("V", "", Y))) %>%
               ggplot(aes(X, Y, fill = var)) + geom_tile() +
               scale_fill_gradientn(colours = c("blue", "white", "red")) + 
@@ -396,7 +397,7 @@ b <- lapply(variance_s, function(x) x %>%
 c <- lapply(variance_g, function(x) x %>% 
               as_tibble %>% 
               tibble::rowid_to_column(var = "X") %>% 
-              gather(key = "Y", value = "var", -1) %>%
+              tidyr::gather(key = "Y", value = "var", -1) %>%
               mutate(Y = as.numeric(gsub("V", "", Y))) %>%
               ggplot(aes(X, Y, fill = var)) + geom_tile() + 
               scale_fill_gradientn(colours = c("blue", "white", "red")) +
@@ -419,7 +420,7 @@ tables <- (wrap_elements(gridExtra::tableGrob(df_g)) + ggtitle("Survival")) +
   plot_spacer() +
   (wrap_elements(gridExtra::tableGrob(df_s)) + ggtitle("Growth"))
 
-ggplot2::ggsave(filename = paste("results/simulations/correlation_between_s&g_", pars$species, "_variance.png", sep = ""), 
+ggplot2::ggsave(filename = paste("results/simulations/Between_s&g/correlation_between_s&g_", pars$species, "_variance.png", sep = ""), 
                 plot_var1 / plot_var2 / tables + plot_layout(heights = c(3,3,1)), width = 21, height =10)
 
 
@@ -433,7 +434,7 @@ ggplot2::ggsave(filename = paste("results/simulations/correlation_between_s&g_",
 d <- lapply(covariance, function(x) x %>% 
               as_tibble %>% 
               tibble::rowid_to_column(var = "X") %>% 
-              gather(key = "Y", value = "cov", -1) %>%
+              tidyr::gather(key = "Y", value = "cov", -1) %>%
               mutate(Y = as.numeric(gsub("V", "", Y))) %>%
               ggplot(aes(X, Y, fill = cov)) + geom_tile() + 
               scale_fill_gradientn(colours = c("blue", "white", "red")) +
@@ -446,6 +447,6 @@ plot_cov <- ((d$neg + ggtitle("-0.9")) +
   plot_annotation(title = "Covariance between survivial and growth kernels",
                   subtitle = "with climate covariance")
 
-ggsave(filename = paste("results/simulations/correlation_between_s&g_", pars$species, "_covariance.png", sep = ""), 
+ggsave(filename = paste("results/simulations/Between_s&g/correlation_between_s&g_", pars$species, "_covariance.png", sep = ""), 
                         plot_cov, width = 18, height = 7)
 
