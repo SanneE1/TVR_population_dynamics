@@ -27,8 +27,7 @@
 output_dir="/work/$USER/$JOB_NAME-$JOB_ID"
 mkdir -p "$output_dir"
 
-
-module load foss/2019b R
+module load foss/2018b R/3.5.1
 
 function=$1
 params=$2

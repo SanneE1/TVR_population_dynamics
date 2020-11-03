@@ -93,34 +93,25 @@ lambda <- P_lambdas(n_it = n_it,
                     save_K = F)
 
 print("ipm done")  
-# b <- lapply(lambda$M_no_cov_ipm[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
-# print("start corr1")
-# c <- corrr::correlate(b)
-# print("correlation1 done")
-# d <- as.matrix(c[,-1])
-# n_corr_hist <- d
-# n_corr_sum <- mean(d, na.rm = T)
-# n_corr_sd <- sd(d, na.rm = T)
 n_lambda <- lambda$no_cov_lambda
+n_lambda_till <- 0
 
-rm(b,c,d)
+if(is.nan(n_lambda)) {
+n_lambda_till <- which(is.nan(lambdas$no_cov_lambda_all[[1]]))
+n_lambda <- lambda$no_cov_lambda_all[[1]][c(2:(which(is.nan(lambdas$no_cov_lambda_all[[1]]))[1]-1))] %>% mean %>% log
+}
 
-print("start corr2")
-# e <- lapply(lambda$M_ipm_cov[[1]], function(x) as.vector(x)) %>% bind_rows %>% t
-# print("correlation2 done")
-# f <- corrr::correlate(e)
-# g <- as.matrix(f[,-1])
-# c_corr_hist <- g
-# c_corr_sum <- mean(g, na.rm = T)
-# c_corr_sd <- sd(g, na.rm = T)
 c_lambda <- lambda$cov_lambda
+c_lambda_till <- 0
 
+if(is.nan(c_lambda)) {
+c_lambda_till <-which(is.nan(lambdas$cov_lambda_all[[1]]))
+c_lambda <- lambda$cov_lambda_all[[1]][c(2:(which(is.nan(lambdas$cov_lambda_all[[1]]))[1]-1))] %>% mean %>% log
 
 df <- tibble(clim_corr[taskID], clim_sd[taskID],
-             n_lambda, c_lambda) #,
-             # n_corr_sum, c_corr_sum,
-             # n_corr_sd, c_corr_sd,
-             # list(n_corr_hist), list(c_corr_hist))
+             n_lambda, c_lambda,
+             n_lambda_till, c_lambda_till)
+
 str(df)
 output
 
