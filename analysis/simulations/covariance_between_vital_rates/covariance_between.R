@@ -83,7 +83,7 @@ clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
 clim_sd[taskID]
 clim_corr[taskID]
 
- 
+
 lambda <- P_lambdas(n_it = n_it, 
                     clim_sd = clim_sd[taskID], 
                     clim_corr = clim_corr[taskID], 
@@ -97,25 +97,27 @@ n_lambda <- lambda$no_cov_lambda
 n_lambda_till <- 0
 
 if(is.nan(n_lambda)) {
-n_lambda_till <- which(is.nan(lambdas$no_cov_lambda_all[[1]]))
-n_lambda <- lambda$no_cov_lambda_all[[1]][c(2:(which(is.nan(lambdas$no_cov_lambda_all[[1]]))[1]-1))] %>% mean %>% log
+  n_lambda_till <- which(is.nan(lambda$no_cov_lambda_all[[1]]))[1]
+  n_lambda <- lambda$no_cov_lambda_all[[1]][c(2:(which(is.nan(lambda$no_cov_lambda_all[[1]]))[1]-1))] %>% mean %>% log
 }
 
 c_lambda <- lambda$cov_lambda
 c_lambda_till <- 0
 
 if(is.nan(c_lambda)) {
-c_lambda_till <-which(is.nan(lambdas$cov_lambda_all[[1]]))
-c_lambda <- lambda$cov_lambda_all[[1]][c(2:(which(is.nan(lambdas$cov_lambda_all[[1]]))[1]-1))] %>% mean %>% log
-
-df <- tibble(clim_corr[taskID], clim_sd[taskID],
-             n_lambda, c_lambda,
-             n_lambda_till, c_lambda_till)
-
-str(df)
-output
-
-saveRDS(df, file = output)
-
-Sys.time() - start
-
+  c_lambda_till <-which(is.nan(lambda$cov_lambda_all[[1]]))[1]
+  c_lambda <- lambda$cov_lambda_all[[1]][c(2:(which(is.nan(lambda$cov_lambda_all[[1]]))[1]-1))] %>% mean %>% log
+  
+  df <- tibble(clim_corr = clim_corr[taskID], 
+               clim_sd = clim_sd[taskID],
+               n_lambda, c_lambda,
+               n_lambda_till, c_lambda_till)
+  
+  str(df)
+  output
+  
+  saveRDS(df, file = output)
+  
+  Sys.time() - start
+  
+  
