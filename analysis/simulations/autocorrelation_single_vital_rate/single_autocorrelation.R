@@ -99,7 +99,7 @@ n_lambda_till <- 0
 
 if(is.nan(n_lambda)) {
   n_lambda_till <- which(is.nan(lambda$no_auto_lambda_all[[1]]))[1]
-  n_lambda <- lambda$no_auto_lambda_all[[1]][c(2:(which(is.nan(lambda$no_auto_lambda_all[[1]]))[1]-1))] %>% mean %>% log
+  n_lambda <- lambda$no_auto_lambda_all[[1]][!is.nan(lambda$no_auto_lambda_all[[1]])] %>% mean %>% log
 }
 
 a_lambda <- lambda$ipm_g_auto_lambda
@@ -107,7 +107,7 @@ a_lambda_till <- 0
 
 if(is.nan(a_lambda)) {
   a_lambda_till <- which(is.nan(lambda$ipm_g_auto_lambda_all[[1]]))[1]
-  a_lambda <- lambda$ipm_g_auto_lambda_all[[1]][c(2:(which(is.nan(lambda$ipm_g_auto_lambda_all[[1]]))[1]-1))] %>% mean %>% log
+  a_lambda <- lambda$ipm_g_auto_lambda_all[[1]][!is.nan(lambda$ipm_g_auto_lambda_all[[1]])] %>% mean %>% log
 }
 
 df <- tibble(clim_corr = clim_corr[taskID], 

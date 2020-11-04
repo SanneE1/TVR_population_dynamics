@@ -108,23 +108,23 @@ n_lambda_till <- 0
 
 if(is.nan(n_lambda)){
   n_lambda_till <- which(is.nan(lambda$non_lagged_all[[1]]))[1]
-  n_lambda <- lambda$non_lagged_all[[1]][c(2:(which(is.nan(lambda$non_lagged_all[[1]]))[1]-1))] %>% mean %>% log
+  n_lambda <- lambda$non_lagged_all[[1]][!is.nan(lambda$non_lagged_all[[1]])] %>% mean %>% log
 }
 
 s_lambda <- lambda$lagged_s
 s_lambda_till <- 0
 
-if(is.nan(n_lambda)){
+if(is.nan(s_lambda)){
   s_lambda_till <- which(is.nan(lambda$lagged_s_all[[1]]))[1]
-  s_lambda <- lambda$lagged_s_all[[1]][c(2:(which(is.nan(lambda$lagged_s_all[[1]]))[1]-1))] %>% mean %>% log
+  s_lambda <- lambda$lagged_s_all[[1]][!is.nan(lambda$non_lagged_all[[1]])] %>% mean %>% log
 }
 
 g_lambda <- lambda$lagged_g
 g_lambda_till <- 0
 
-if(is.nan(n_lambda)){
+if(is.nan(g_lambda)){
   g_lambda_till <- which(is.nan(lambda$lagged_g_all[[1]]))[1]
-  g_lambda <- lambda$lagged_g_all[[1]][c(2:(which(is.nan(lambda$lagged_g_all[[1]]))[1]-1))] %>% mean %>% log
+  g_lambda <- lambda$lagged_g_all[[1]][!is.nan(lambda$non_lagged_all[[1]])] %>% mean %>% log
 }
 
 
