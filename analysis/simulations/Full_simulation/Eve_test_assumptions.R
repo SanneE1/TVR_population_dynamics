@@ -104,34 +104,13 @@ print("ipm done")
 lambda
 
 n_lambda <- lambda$non_lagged
-n_lambda_till <- 0
-
-if(is.nan(n_lambda)){
-  n_lambda_till <- which(is.nan(lambda$non_lagged_all[[1]]))[1]
-  n_lambda <- lambda$non_lagged_all[[1]][!is.nan(lambda$non_lagged_all[[1]])] %>% mean %>% log
-}
-
 s_lambda <- lambda$lagged_s
-s_lambda_till <- 0
-
-if(is.nan(s_lambda)){
-  s_lambda_till <- which(is.nan(lambda$lagged_s_all[[1]]))[1]
-  s_lambda <- lambda$lagged_s_all[[1]][!is.nan(lambda$non_lagged_all[[1]])] %>% mean %>% log
-}
-
 g_lambda <- lambda$lagged_g
-g_lambda_till <- 0
-
-if(is.nan(g_lambda)){
-  g_lambda_till <- which(is.nan(lambda$lagged_g_all[[1]]))[1]
-  g_lambda <- lambda$lagged_g_all[[1]][!is.nan(lambda$non_lagged_all[[1]])] %>% mean %>% log
-}
-
 
 df <- tibble(clim_corr = clim_corr[taskID], 
              clim_sd = clim_sd[taskID],
-             n_lambda, s_lambda, g_lambda,
-             n_lambda_till, s_lambda_till, g_lambda_till)
+             n_lambda, s_lambda, g_lambda)
+
 str(df)
 output
 

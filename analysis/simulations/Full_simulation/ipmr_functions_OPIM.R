@@ -80,7 +80,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       fp = inv_logit(fp_int + fp_slope * size_1),
       fn = pois(fn_int + fn_slope * size_1),
       seed = rnorm(1, mean = seed_mean, sd = seed_sd),
-      germ = inv_logit(germ_mean),
+      germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
       data_list = params_list,
@@ -183,7 +183,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       fp = inv_logit(fp_int + fp_slope * size_1),
       fn = pois(fn_int + fn_slope * size_1),
       seed = rnorm(1, mean = seed_mean, sd = seed_sd),
-      germ = inv_logit(germ_mean),
+      germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
       data_list = params_list,
@@ -277,7 +277,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       fp = inv_logit(fp_int + fp_slope * size_1),
       fn = pois(fn_int + fn_slope * size_1),
       seed = rnorm(1, mean = seed_mean, sd = seed_sd),
-      germ = inv_logit(germ_mean),
+      germ = germ_mean,
       fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
       
       data_list = params_list,
