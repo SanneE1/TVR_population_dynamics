@@ -1,11 +1,11 @@
 ## Wrapper to simulate data, calculate vital rates, and use these vital rates for lambda calculations
 
-wrapper <- function(init.pop.size, n_yrs, clim_sd, clim_corr) {
+wrapper <- function(init.pop.size, run_yrs, sample, clim_sd, clim_corr) {
   
-  data <- simulate(init.pop.size, n_yrs, clim_sd, clim_corr)
+  data <- simulate(init.pop.size, run_yrs, sample, clim_sd, clim_corr)
 
-  vr_lagged <- bayes_vr_lagged(data)
-  vr_recent <- bayes_vr_recent(data)
+  vr_lagged <- bayes_vr_lagged(data, n_sample = 30)
+  vr_recent <- bayes_vr_recent(data, n_sample = 30)
   
   lagged_lambdas <- bayes_lambda(vr_lagged, clim_sd, clim_corr, n_it = 5000)
   recent_lambdas <- bayes_lambda(vr_recent, clim_sd, clim_corr, n_it = 5000)
@@ -71,10 +71,10 @@ fd_z1 <- function(z1, par) {
 
 
 ## simulate dataset
-simulate <- function(init.pop.size, n_yrs, clim_sd, clim_corr) {
+simulate <- function(init.pop.size = 100000, run_yrs = 1000, sample, clim_sd, clim_corr) {
   
-  clim <- data.frame(yr = c(-4:n_yrs),
-                     recent = create_seq(n_it = n_yrs, clim_sd = clim_sd, clim_corr = clim_corr))
+  clim <- data.frame(yr = c(-4:run_yrs),
+                     recent = create_seq(n_it = run_yrs, clim_sd = clim_sd, clim_corr = clim_corr))
   a <- clim %>% mutate(yr = yr + 1) %>% rename(lagged = recent)
   clim <- left_join(clim, a)
   print(clim_sd)
@@ -104,14 +104,14 @@ simulate <- function(init.pop.size, n_yrs, clim_sd, clim_corr) {
   z <- round(abs(rnorm(init.pop.size, mean = par.true$fd_int, sd = par.true$fd_sd)), digits = 0)
   
   # vectors to store pop size and mean size
-  pop.size.t <- mean.z.t <- mean.z.repr.t <- n_recr.t <- n_seeds.t <- numeric(n_yrs)
+  pop.size.t <- mean.z.t <- mean.z.repr.t <- n_recr.t <- n_seeds.t <- numeric(run_yrs)
   
   
   
   yr <- 1
   
   try(
-  while (yr <= n_yrs && length(z) > 0) {
+  while (yr <= run_yrs && length(z) > 0) {
     
     # calculate current population size
     pop.size <- length(z)
@@ -184,23 +184,47 @@ simulate <- function(init.pop.size, n_yrs, clim_sd, clim_corr) {
     
   })
   
+  full_data <- sim.data
+  
+  if( max(sim.data$yr) - round(max(sim.data$yr)*0.75) >= sample ) {
+    start_sample <- round(max(sim.data$yr)*0.75)
+    sample_range <- c(start_sample:(start_sample+sample))
+    
+    sim.data <- sim.data %>% filter(yr %in% sample_range)
+
+  } else if (max(sim.data$yr) - round(max(sim.data$yr)*0.5) >= sample ) {
+    start_sample <- round(max(sim.data$yr)*0.5)
+    sample_range <- c(start_sample:(start_sample+sample))
+    
+    sim.data <- sim.data %>% filter(yr %in% sample_range)
+  } else {
+    start_sample <- round(max(sim.data$yr)-sample)
+    sample_range <- c(start_sample:(start_sample+sample))
+      
+    sim.data <- sim.data %>% filter(yr %in% sample_range)
+  }
+  
   model_lagged <- summary(glm(z1 ~ log(z) + lagged, family = "poisson", data = sim.data))  ## Right model
   model_recent <- summary(glm(z1 ~ log(z) + recent, family = "poisson", data = sim.data))  ## Wrong model
   
-
+  actual_lambda <- data.frame(N1 = c(pop.size.t, NA), N = c(NA, pop.size.t)) %>% 
+                            mutate(lambda = N1/N) %>%
+                            summarise(lambda = log(mean(lambda, na.rm = T)))
+  
   df <- tibble(clim_corr = clim_corr,
                clim_sd = clim_sd,
+               actual_lambda = actual_lambda$lambda,
                lagged_estimate = model_lagged$coefficients["lagged", c("Estimate")],
                lagged_p = model_lagged$coefficients["lagged", c("Pr(>|z|)")],
                recent_estimate = model_recent$coefficients["recent", c("Estimate")],
                recent_p = model_recent$coefficients["recent", c("Pr(>|z|)")],
-               pop.sizes = list(pop.size.t),
-               n_seeds.t = list(n_seeds.t),
-               n_recr.t = list(n_recr.t),
-               z_new = list(z_new)
+               pop.sizes = list(pop.size.t[sample_range]),
+               n_seeds.t = list(n_seeds.t[sample_range]),
+               n_recr.t = list(n_recr.t[sample_range]),
+               z_new = list(z_new[sample_range])
                )
   
-  return(list(df = df, sim.data = sim.data))
+  return(list(df = df, sim.data = sim.data, full.data = full_data))
   
 }
 
