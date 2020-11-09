@@ -1,11 +1,11 @@
 ## Wrapper to simulate data, calculate vital rates, and use these vital rates for lambda calculations
 
-wrapper <- function(init.pop.size, run_yrs, sample, clim_sd, clim_corr) {
+wrapper <- function(sample, clim_sd, clim_corr) {
   
-  data <- simulate(init.pop.size, run_yrs, sample, clim_sd, clim_corr)
+  data <- simulate(sample, clim_sd, clim_corr)
 
-  vr_lagged <- bayes_vr_lagged(data, n_sample = 30)
-  vr_recent <- bayes_vr_recent(data, n_sample = 30)
+  vr_lagged <- bayes_vr_lagged(data)
+  vr_recent <- bayes_vr_recent(data)
   
   lagged_lambdas <- bayes_lambda(vr_lagged, clim_sd, clim_corr, n_it = 5000)
   recent_lambdas <- bayes_lambda(vr_recent, clim_sd, clim_corr, n_it = 5000)
@@ -71,7 +71,7 @@ fd_z1 <- function(z1, par) {
 
 
 ## simulate dataset
-simulate <- function(init.pop.size = 100000, run_yrs = 1000, sample, clim_sd, clim_corr) {
+simulate <- function(sample, clim_sd, clim_corr, init.pop.size = 100000, run_yrs = 1000) {
   
   clim <- data.frame(yr = c(-4:run_yrs),
                      recent = create_seq(n_it = run_yrs, clim_sd = clim_sd, clim_corr = clim_corr))
@@ -232,11 +232,8 @@ simulate <- function(init.pop.size = 100000, run_yrs = 1000, sample, clim_sd, cl
 #using lagged climate for growth
 bayes_vr_lagged <- function(data, n_sample = 100) {
   
-  set_ulam_cmdstan(TRUE)
-  
   sim.data <- data$sim.data
   sim.data <- sim.data %>% filter(z != 0)
-  
   
   data_mod <- list(
     yr_1 = sim.data$yr,
@@ -255,49 +252,22 @@ bayes_vr_lagged <- function(data, n_sample = 100) {
     n_seeds = sim.data$n_seeds[which(sim.data$fp == 1)],
     n_recr = data$df$n_recr.t[[1]], 
     n_seeds_t = data$df$n_seeds.t[[1]],
-    z_new = data$df$z_new[[1]]
+    z_new = data$df$z_new[[1]],
+    N3 = length(sim.data$yr[which(sim.data$fp == 1)]),
+    N2 = length(sim.data$yr[which(sim.data$surv == 1)]),
+    N1 = length(sim.data$yr),
+    N = length(data$df$z_new[[1]])
   )
   
-  
-  recent_vr <- ulam(
-    alist(
-      surv ~ dbinom(1, p_s),
-      logit(p_s) <- s_int + s_slope * log(z_1) + s_recent * recent_1 ,
-      s_int ~ dnorm(0, 1),
-      s_slope ~ dnorm(0, 1),
-      s_recent ~ dnorm(0, 1),
-      
-      z1 ~ dnorm(g_mean, g_sd),
-      log(g_mean) <- g_int + g_slope * log(z_2) + g_lagged * recent_2 ,
-      g_int ~ dnorm(0,1),
-      g_slope ~ dnorm(0,1),
-      g_lagged ~ dnorm(0,1),
-      g_sd ~ dexp(1),
-      
-      fp ~ dbinom(1, p_fp),
-      logit(p_fp) <- fp_int + fp_slope * log(z_2),
-      fp_int ~ dnorm(0, 1),
-      fp_slope ~ dnorm(0, 1),
-      
-      n_seeds ~ dnorm(seed_mu, seed_sd),
-      log(seed_mu) <- seed_int + seed_slope * log(z_3),
-      seed_int ~ dnorm(0,1),
-      seed_slope ~ dnorm(0,1),
-      seed_sd ~ dexp(1),
-      
-      n_recr ~ dbinom(n_seeds_t, seed_p),
-      logit(seed_p) <- p_germ,
-      p_germ ~ dnorm(0,1),
-      
-      z_new ~ dnorm(fd_int, fd_sd),
-      fd_int ~ dnorm(0,1),
-      fd_sd ~ dexp(1)
-      
-    ), data = data_mod, chains = 1, iter=5000, log_lik = T
-  )
+  recent_mod <- cmdstan_model("/home/evers/lagged_buffering/analysis/simulations/modelling_effect/vr_model_recent.stan")
+  recent_fit <- recent_mod$sample(data = data_mod,
+                                  chains = 1,
+                                  iter_sampling = 2500,
+                                  iter_warmup = 2500)
   
   
-  params <- extract.samples(recent_vr, n = n_sample)
+  params <- posterior::as_draws_df(recent_fit$draws())
+  params <- params[sample(2500, n_sample), ]
   
   return(params)
   
@@ -307,8 +277,6 @@ bayes_vr_lagged <- function(data, n_sample = 100) {
 # using recent climate for growth
 bayes_vr_recent <- function(data, n_sample = 100) {
   
-  set_ulam_cmdstan(TRUE)
-  
   sim.data <- data$sim.data
   sim.data <- sim.data %>% filter(z != 0)
   
@@ -333,45 +301,15 @@ bayes_vr_recent <- function(data, n_sample = 100) {
     z_new = data$df$z_new[[1]]
   )
   
-  recent_vr <- ulam(
-    alist(
-      surv ~ dbinom(1, p_s),
-      logit(p_s) <- s_int + s_slope * log(z_1) + s_recent * recent_1 ,
-      s_int ~ dnorm(0, 1),
-      s_slope ~ dnorm(0, 1),
-      s_recent ~ dnorm(0, 1),
-      
-      z1 ~ dnorm(g_mean, g_sd),
-      log(g_mean) <- g_int + g_slope * log(z_2) + g_recent * recent_2 ,
-      g_int ~ dnorm(0,1),
-      g_slope ~ dnorm(0,1),
-      g_recent ~ dnorm(0,1),
-      g_sd ~ dexp(1),
-      
-      fp ~ dbinom(1, p_fp),
-      logit(p_fp) <- fp_int + fp_slope * log(z_2),
-      fp_int ~ dnorm(0, 1),
-      fp_slope ~ dnorm(0, 1),
-      
-      n_seeds ~ dnorm(seed_mu, seed_sd),
-      log(seed_mu) <- seed_int + seed_slope * log(z_3),
-      seed_int ~ dnorm(0,1),
-      seed_slope ~ dnorm(0,1),
-      seed_sd ~ dexp(1),
-      
-      n_recr ~ dbinom(n_seeds_t, seed_p),
-      logit(seed_p) <- p_germ,
-      p_germ ~ dnorm(0,1),
-      
-      z_new ~ dnorm(fd_int, fd_sd),
-      fd_int ~ dnorm(0,1),
-      fd_sd ~ dexp(1)
-      
-    ), data = data_mod, chains = 1, iter=5000, log_lik = T
-  )
+  lagged_mod <- cmdstan_model("/home/evers/lagged_buffering/analysis/simulations/modelling_effect/vr_model_lagged.stan")
+  lagged_fit <- lagged_mod$sample(data = data_mod,
+                                  chains = 1,
+                                  iter_sampling = 2500,
+                                  iter_warmup = 2500)
   
   
-  params <- extract.samples(recent_vr, n = n_sample)
+  params <- posterior::as_draws_df(lagged_fit$draws())
+  params <- params[sample(2500, n_sample), ]
   
   return(params)
   
@@ -379,7 +317,7 @@ bayes_vr_recent <- function(data, n_sample = 100) {
 
 
 # calculate lambda from calculated vitalrate models
-bayes_lambda <- function(param.sample, clim_sd, clim_corr, n_mesh = 100, n_it = 10000) {
+bayes_lambda <- function(param.sample, clim_sd, clim_corr, type, n_mesh = 100, n_it = 10000) {
   
   init_pop_vec <- runif(n_mesh)
   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
@@ -415,12 +353,27 @@ bayes_lambda <- function(param.sample, clim_sd, clim_corr, n_mesh = 100, n_it = 
                        env_sampler = env_sampler)
   
   
-  lambda <- c(1:length(param.sample[[1]]))
+  lambda <- c(1:length(param.sample$lp__))
   
-  for(i in c(1:length(param.sample[[1]]))) {
+  for(i in c(1:length(param.sample$lp__))) {
     svMisc::progress(i, progress.bar = T)
     
-    params_list <- lapply(param.sample, function(x) x[i])
+    params_list <- list(s_int = param.sample$s_int[i],
+                        s_size = param.sample$s_size[i],
+                        s_temp = param.sample$s_recent[i],
+                        g_int = param.sample$g_int[i],
+                        g_size = param.sample$g_size[i],
+                        g_recent = param.sample$g_recent[i],
+                        g_lagged = param.sample$g_lagged[i],
+                        g_sd = param.sample$g_sd[i],
+                        fp_int = param.sample$fp_int[i],
+                        fp_size = param.sample$fp_size[i],
+                        fd_int = param.sample$fd_int[i],
+                        fd_sd = param.sample$fd_sd[i],
+                        seed_int = param.sample$seed_int[i],
+                        seed_size = param.sample$seed_size[i],
+                        germ_int = param.sample$germ_int[i],
+                        germ_sd = param.sample$germ_sd[i])
     
     if(is.null(params_list$g_lagged) == T) { params_list$g_lagged <- 0}
     if(is.null(params_list$g_recent) == T) { params_list$g_recent <- 0}

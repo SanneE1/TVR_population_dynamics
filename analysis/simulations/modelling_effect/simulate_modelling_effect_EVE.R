@@ -3,7 +3,7 @@ suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ipmr))
-suppressPackageStartupMessages(library(rethinking))
+suppressPackageStartupMessages(library(cmdstanr))
 
 start <- Sys.time()
 start
@@ -24,15 +24,14 @@ taskID
 
 source("/home/evers/lagged_buffering/analysis/simulations/modelling_effect/population_simulation_functions.R")
 
-clim_sd <- rep(c(1:2), 50)
-clim_cor <- rep(seq(from = -0.9, to = 0.9, length.out = 5), each = 20)
+clim_sd <- rep(seq(from = 0, to = 2, length.out = 5), 50)
+clim_cor <- rep(seq(from = -0.9, to = 0.9, length.out = 5), each = 50)
 
 clim_cor[taskID]
 clim_sd[taskID]
 
 
-df <- wrapper(init.pop.size = 1000,   
-              n_yrs = 35,
+df <- wrapper(sample = 35,
               clim_corr = clim_cor[taskID],
               clim_sd = clim_sd[taskID])
 
