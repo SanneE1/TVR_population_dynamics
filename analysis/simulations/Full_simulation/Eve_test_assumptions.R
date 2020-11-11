@@ -27,6 +27,12 @@ Parsoptions <- list (
     default = 10000),
   
   make_option(
+    opt_str = c("-l", "--lagg"),
+    dest    = "n_lag",
+    help    = "number of years climat lagg for growth vital rate to respond to",
+    default = 1),
+  
+  make_option(
     opt_str = c("-m", "--meshpoints"),
     dest    = "n_mesh",
     help    = "number of meshpoints when integrating the IPM",
@@ -46,6 +52,7 @@ cli <- parse_args(parser, positional_arguments = 3)
 foption <- cli$options$foption
 n_mesh <- as.integer(cli$options$n_mesh)
 n_it <- as.integer(cli$options$n_it)
+lag <- cli$options$n_lag
 
 taskID <- as.integer(Sys.getenv("SGE_TASK_ID"))
 
@@ -92,6 +99,7 @@ lambda <- P_lambdas(n_it = n_it,
                     params_list = params_list, 
                     clim_params = clim_list,
                     n_mesh = n_mesh,
+                    lag = lag,
                     save_K = F)
 
 

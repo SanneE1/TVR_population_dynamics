@@ -34,12 +34,14 @@ params=$2
 climparams=$3
 iterations=$4
 meshpoints=$5
+lag=$6
 output="$output_dir"/${JOB_NAME}_${function}_${JOB_ID}_$SGE_TASK_ID.rds
 
 Rscript "$HOME"/lagged_buffering/analysis/simulations/Full_simulation/Eve_test_assumptions.R \
 --function="$function" \
 --iterations="$iterations" \
 --meshpoints="$meshpoints" \
+--lagg="$lag" \
 "$output" \
 "$params" \
 "$climparams"

@@ -1,6 +1,6 @@
 
-create_seq <- function(n_it, clim_sd, clim_corr) { 
-  for(n in c(1:(n_it+5))) {
+create_seq <- function(n_it, clim_sd, clim_corr, lag) { 
+  for(n in c(1:(n_it+lag))) {
     if(n == 1) {
       seq <- rnorm(1)
     } else {
@@ -12,10 +12,10 @@ create_seq <- function(n_it, clim_sd, clim_corr) {
 }
 
 
-P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh = 200, save_K = FALSE, n_save_K = 0.1) {
+P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, lag = 1, n_mesh = 200, save_K = FALSE, n_save_K = 0.1) {
   
   init_pop_vec <- runif(n_mesh)
-  environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
+  environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr, lag = lag)
   
   params_list <- append(params_list, clim_params)
   
@@ -23,7 +23,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
   
   env_sampler <- function(environ_seq, iteration) {
     
-    temp <- list("temp0" = environ_seq[iteration + 1],
+    temp <- list("temp0" = environ_seq[iteration + lag],
                  "temp1" = environ_seq[iteration]
     )
     
@@ -35,7 +35,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
   
   inv_logit <- function(x) {
     return(
-      1/(1 + exp(-(x)))
+      boot::inv.logit(x)
     )
   }
   
