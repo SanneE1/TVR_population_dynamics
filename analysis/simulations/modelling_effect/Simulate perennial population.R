@@ -5,9 +5,8 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(ipmr)
-library(rethinking)
 library(pbapply)
-
+library(cmdstanr)
 
 source("analysis/simulations/modelling_effect/population_simulation_functions.R")
 
