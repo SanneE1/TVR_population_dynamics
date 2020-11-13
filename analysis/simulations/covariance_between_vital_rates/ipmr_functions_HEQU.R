@@ -1,10 +1,9 @@
 
-P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh = 200, save_K = FALSE, n_save_K = 0.1) {
+P_lambdas <- function(n_it, clim_sd, clim_cov, params_list, clim_params, n_mesh = 200, save_K = FALSE, n_save_K = 0.1) {
   
   init_pop_vec <- runif(n_mesh)
   
-  environ_seq1 <- rnorm_multi(n = n_it, mu = c(0,0), sd = clim_sd, r = 0, varnames = c("surv", "growth"))
-  environ_seq2 <- rnorm_multi(n = n_it, mu = c(0,0), sd = clim_sd, r = clim_corr, varnames = c("surv", "growth")) 
+  environ_seq <- rnorm_multi(n = n_it, mu = c(0,0), sd = clim_sd, r = clim_cov, varnames = c("surv", "growth")) 
   
   params_list <- append(params_list, clim_params)
   
@@ -38,109 +37,10 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
                        pois = pois,
                        env_sampler = env_sampler)
   
+
   
-  ### set up non-lagged ipm -------------------------------------------------------------------------
-  
-  no_cov_ipm <- init_ipm("simple_di_stoch_param") %>%
-    define_kernel(
-      name = "P",
-      
-      formula = s * g,
-      family = "CC",
-      
-      s = inv_logit(s_int + s_slope * log(size_1) + s_temp * surv_clim),
-      g = dnorm(size_2, mean = g_mean, sd = g_sd),
-      g_mean = pois(g_int + g_slope * log(size_1) + g_temp * growth_clim),
-      
-      data_list = params_list,
-      states = list(c('size')),
-      
-      has_hier_effs = FALSE,
-      
-      evict_cor = TRUE,
-      evict_fun = truncated_distributions("norm", "g")
-    ) %>%
-    define_kernel(
-      name = "F",
-      
-      formula = fp * fn * seed * germ * fd,
-      family = "CC",
-      
-      fp = inv_logit(fp_int + fp_slope * log(size_1)),
-      fn = pois(fn_int + fn_slope * log(size_1)),
-      seed = rnorm(1, seed_mean, seed_sd),
-      germ = germ_mean,
-      fd = dnorm(size_2, mean = fd_mean, sd = fd_sd),
-      
-      data_list = params_list,
-      states = list(c("size")),
-      
-      has_hier_effs = FALSE,
-      
-      evict_cor = TRUE,
-      evict_fun = truncated_distributions("norm", "fd")
-    ) %>%
-    define_k(
-      name = "K",
-      family = "IPM",
-      K = P + F,
-      n_size_t_1 = K %*% n_size_t,
-      data_list = list(),
-      states = list(c("size")),
-      has_hier_effs = FALSE,
-      
-      evict_cor = FALSE
-    ) %>% 
-    define_impl(
-      make_impl_args_list(
-        kernel_names = c("K", "P", "F"),
-        int_rule = rep("midpoint", 3),
-        dom_start = rep("size", 3),
-        dom_end = rep("size", 3)
-      )
-    ) %>%
-    define_domains( size = c(1, 115, n_mesh)
-    ) %>% 
-    define_env_state(
-      env_values = env_sampler(environ_seq = environ_seq,
-                               iteration = t),
-      data_list = list(
-        environ_seq = environ_seq1,
-        env_sampler = env_sampler
-      )
-    ) %>%
-    define_pop_state(
-      pop_vectors = list(
-        n_size_t = init_pop_vec
-      )
-    ) %>%
-    make_ipm(usr_funs = my_functions,
-             iterate = TRUE,
-             iterations = n_it,
-             report_progress = T)
-  
-  message("ipm 1 done")
-  lambdas <- tibble(clim_sd = clim_sd,
-                    autocorrelation = clim_corr,
-                    s_temp = clim_params$s_temp,
-                    g_temp = clim_params$g_temp,
-                    ### get lambda non-lagged ---------------------------------------------------------
-                    no_cov_lambda = lambda(no_cov_ipm, "pop_size", "stochastic"), 
-                    no_cov_lambda_all = list(lambda(no_cov_ipm, "pop_size", "all")),
-                    n_env_seq = list(no_cov_ipm$env_seq))
-  
-  message("trying to assign K matrices to tibble")
-  
-  if(save_K == T) {
-    lambdas$M_no_cov_ipm <- list(no_cov_ipm$iterators[c((n_it - (n_it * n_save_K)):n_it)])
-  }
-  message("done")
-  
-  # remove clim_mod object to save memory
-  rm(no_cov_ipm)
-  
-  ## lagged g ipm ----------------------------------------
-  message("starting 2nd ipm")
+  ## covariance g ipm ----------------------------------------
+  message("starting ipm")
   ipm_cov <- init_ipm("simple_di_stoch_param") %>%
     define_kernel(
       name = "P",
@@ -204,7 +104,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
       env_params = env_sampler(environ_seq = environ_seq,
                                iteration = t),
       data_list = list(
-        environ_seq = environ_seq2,
+        environ_seq = environ_seq,
         env_sampler = env_sampler
       )
     ) %>%
@@ -218,8 +118,14 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
              iterations = n_it)
   
   message("done")
-  lambdas$cov_lambda <- lambda(ipm_cov, "pop_size", "stochastic")
-  lambdas$cov_lambda_all <- list(lambda(ipm_cov, "pop_size", "all"))
+  lambdas <- tibble(clim_sd = clim_sd,
+                    autocorrelation = clim_corr,
+                    s_temp = clim_params$s_temp,
+                    g_temp = clim_params$g_temp,
+                    cov_lambda = lambda(ipm_cov, "pop_size", "stochastic"),
+                    cov_lambda_all = list(lambda(ipm_cov, "pop_size", "all")),
+                    env_seq = list(ipm_cov$env_seq)
+  )
   
   if(save_K == T) {
     lambdas$M_ipm_cov <- list(ipm_cov$iterators[c((n_it - (n_it * n_save_K)):n_it)])
@@ -228,10 +134,10 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
   return(lambdas)
 }
 
-# PF_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params) {
+# PF_lambdas <- function(n_it, clim_sd, clim_cov, params_list, clim_params) {
 #   
 #   init_pop_vec <- runif(200)
-#   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
+#   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_cov = clim_cov)
 #   
 #   params_list <- append(params_list, clim_params)
 #   
@@ -346,7 +252,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
 #   
 #   
 #   lambdas <- tibble(clim_sd = clim_sd,
-#                     autocorrelation = clim_corr,
+#                     autocorrelation = clim_cov,
 #                     s_temp = clim_params$s_temp,
 #                     g_temp = clim_params$g_temp,
 #                     fpC_temp  = clim_params$fpC_temp,

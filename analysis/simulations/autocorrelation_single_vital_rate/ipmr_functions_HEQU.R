@@ -1,10 +1,10 @@
 
-create_seq <- function(n_it, clim_sd, clim_corr) { 
+create_seq <- function(n_it, clim_sd, clim_auto) { 
   for(n in c(1:(n_it+5))) {
     if(n == 1) {
       seq <- rnorm(1)
     } else {
-      seq[n] <- clim_corr * seq[n-1] + rnorm(1)
+      seq[n] <- clim_auto * seq[n-1] + rnorm(1)
     }
   }
   seq <- scale(seq) * clim_sd
@@ -12,10 +12,10 @@ create_seq <- function(n_it, clim_sd, clim_corr) {
 }
 
 
-P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh = 200, save_K = FALSE, n_save_K = 0.1) {
+P_lambdas <- function(n_it, clim_sd, clim_auto, params_list, clim_params, n_mesh = 200, save_K = FALSE, n_save_K = 0.1) {
   
   init_pop_vec <- runif(n_mesh)
-  environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
+  environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_auto = clim_auto)
   environ_seq0 <- rnorm(n_it, 0, clim_sd)
   params_list <- append(params_list, clim_params)
   
@@ -131,7 +131,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
   # 
   # message("ipm 1 done")
   lambdas <- tibble(clim_sd = clim_sd,
-                    autocorrelation = clim_corr,
+                    autocorrelation = clim_auto,
                     s_temp = clim_params$s_temp,
                     g_temp = clim_params$g_temp  ) #,
                     ### get lambda non-lagged ---------------------------------------------------------
@@ -241,10 +241,10 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
   return(lambdas)
 }
 
-# PF_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params) {
+# PF_lambdas <- function(n_it, clim_sd, clim_auto, params_list, clim_params) {
 #   
 #   init_pop_vec <- runif(200)
-#   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
+#   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_auto = clim_auto)
 #   
 #   params_list <- append(params_list, clim_params)
 #   
@@ -359,7 +359,7 @@ P_lambdas <- function(n_it, clim_sd, clim_corr, params_list, clim_params, n_mesh
 #   
 #   
 #   lambdas <- tibble(clim_sd = clim_sd,
-#                     autocorrelation = clim_corr,
+#                     autocorrelation = clim_auto,
 #                     s_temp = clim_params$s_temp,
 #                     g_temp = clim_params$g_temp,
 #                     fpC_temp  = clim_params$fpC_temp,

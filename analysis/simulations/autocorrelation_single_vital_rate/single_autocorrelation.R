@@ -85,7 +85,7 @@ clim_corr[taskID]
 
 lambda <- P_lambdas(n_it = n_it, 
                     clim_sd = clim_sd[taskID], 
-                    clim_corr = clim_corr[taskID], 
+                    clim_auto = clim_corr[taskID], 
                     params_list = params_list, 
                     clim_params = clim_list,
                     n_mesh = n_mesh,
