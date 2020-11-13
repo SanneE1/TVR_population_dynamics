@@ -92,14 +92,12 @@ lambda <- P_lambdas(n_it = n_it,
                     save_K = F)
 
 
-
 print("ipm done")  
-n_lambda <- lambda$no_auto_lambda
-a_lambda <- lambda$ipm_g_auto_lambda
+a_lambda <- 
 
 df <- tibble(clim_corr = clim_corr[taskID], 
              clim_sd = clim_sd[taskID],
-             n_lambda, a_lambda)
+             lambda$ipm_g_auto_lambda)
 
 str(df)
 output
