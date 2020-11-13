@@ -245,30 +245,30 @@ fec <- function(z1, z, pars) {
 
 
 # HEQU
-# pars <- data.frame(species = "H",
-#                    s_int = -0.229,
-#                    s_size = 1.077,
-#                    s_temp = 1.233,
-#                    g_int = 0.424,
-#                    g_size = 0.846,
-#                    g_temp = -0.066,
-#                    g_sd = 1.076,
-#                    fp_int = -3.970,
-#                    fp_size = 1.719,
-#                    fd_int = 1.178749,
-#                    fd_sd = 0.76,
-#                    fn_int = -0.646,
-#                    fn_size = 0.705,
-#                    seed_int = 60.4,
-#                    seed_size = 5,
-#                    germ_int = 0.00229,
-#                    germ_sd = 0.00444,
-# 
-#                    mat_siz = 100,
-#                    L = 1,
-#                    U = 115
-# 
-# )
+pars <- data.frame(species = "H",
+                   s_int = -0.229,
+                   s_size = 1.077,
+                   s_temp = 1.233,
+                   g_int = 0.424,
+                   g_size = 0.846,
+                   g_temp = -0.066,
+                   g_sd = 1.076,
+                   fp_int = -3.970,
+                   fp_size = 1.719,
+                   fd_int = 1.178749,
+                   fd_sd = 0.76,
+                   fn_int = -0.646,
+                   fn_size = 0.705,
+                   seed_int = 60.4,
+                   seed_size = 5,
+                   germ_int = 0.00229,
+                   germ_sd = 0.00444,
+
+                   mat_siz = 100,
+                   L = 1,
+                   U = 115
+
+)
 
 
 # OPIM based
@@ -362,7 +362,7 @@ load(paste("results/simulations/elasticity_mpm_", pars$species, ".RData", sep = 
 plot <- elast %>% 
   as_tibble %>% 
   tibble::rowid_to_column(var = "X") %>% 
-  gather(key = "Y", value = "elasticity", -1) %>%
+  tidyr::gather(key = "Y", value = "elasticity", -1) %>%
   mutate(Y = as.numeric(gsub("V", "", Y))) %>%
   ggplot(aes(X, Y, fill = elasticity)) + geom_tile() + 
   theme_minimal() + coord_flip() + scale_x_reverse() + 
