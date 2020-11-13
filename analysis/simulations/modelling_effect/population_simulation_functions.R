@@ -321,7 +321,7 @@ bayes_vr_recent <- function(data, n_sample = 100) {
 
 
 # calculate lambda from calculated vitalrate models
-bayes_lambda <- function(param.sample, clim_sd, clim_corr, type, n_mesh = 100, n_it = 5000) {
+bayes_lambda <- function(param.sample, clim_sd, clim_corr, n_mesh = 100, n_it = 5000) {
   
   init_pop_vec <- runif(n_mesh)
   environ_seq <- create_seq(n_it = n_it, clim_sd = clim_sd, clim_corr = clim_corr)
@@ -360,7 +360,8 @@ bayes_lambda <- function(param.sample, clim_sd, clim_corr, type, n_mesh = 100, n
   lambda <- c(1:length(param.sample$lp__))
   
   for(i in c(1:length(param.sample$lp__))) {
-    svMisc::progress(i, progress.bar = T)
+    
+    print(paste(i, "of", length(param.sample$lp__)))
     
     params_list <- list(s_int = param.sample$s_int[i],
                         s_slope = param.sample$s_slope[i],

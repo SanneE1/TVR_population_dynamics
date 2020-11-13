@@ -7,6 +7,7 @@ library(ggplot2)
 library(ipmr)
 library(pbapply)
 library(cmdstanr)
+library(parallel)
 
 source("analysis/simulations/modelling_effect/population_simulation_functions.R")
 
@@ -17,7 +18,7 @@ clim_cor <- rep(seq(from = -0.9, to = 0.9, length.out = 5), each = 3)
 cores <- detectCores()
 cl <- makeCluster(cores-2)
 clusterExport(cl = cl, ls())
-clusterEvalQ(cl, c(library(rethinking), library(ipmr), library(dplyr), library(tidyr)))
+clusterEvalQ(cl, c(library(cmdstanr), library(ipmr), library(dplyr), library(tidyr)))
 
 start <- Sys.time()
 start
@@ -31,7 +32,7 @@ end <- Sys.time()
 end - start
 stopCluster(cl)
 
-saveRDS(df, "results/simulations/Simulated_pop_1.rds")
+saveRDS(df, "results/simulations/Simulated_pop_3.rds")
 df <- readRDS("results/simulations/Simulated_pop_1.rds") %>% rbind(.,readRDS("results/simulations/Simulated_pop_2.rds") )
 
 end <- Sys.time()
@@ -43,9 +44,9 @@ df1 <- df %>% bind_rows %>%
   rename(lagged_lambdas = `list(lagged_lambdas)`,
          recent_lambdas = `list(recent_lambdas)`) %>% 
   select(clim_corr, clim_sd, lagged_lambdas, recent_lambdas) %>%
-  pivot_longer(contains("lambdas"), names_to = "type", values_to = "estimated_lambda") %>% 
-  cbind(actual_lambda) %>% rename(actual_lambda = lambda) %>%
-  mutate(lambda_diff = estimated_lambda - actual_lambda)
+  # pivot_longer(contains("lambdas"), names_to = "type", values_to = "estimated_lambda") %>% 
+  # cbind(actual_lambda) %>% rename(actual_lambda = lambda) %>%
+  # mutate(lambda_diff = estimated_lambda - actual_lambda)
 
 df2 <- df %>% bind_rows %>%
   pivot_longer(contains("estimate"), names_to = "type", values_to = "estimate_coefficient")
