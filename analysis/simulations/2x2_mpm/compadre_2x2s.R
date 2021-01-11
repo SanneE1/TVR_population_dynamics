@@ -1,22 +1,31 @@
-library(dplyr)
-library(leaflet)
-library(measurements)
-library(popbio)
-library(pbapply)
-library(parallel)
-library(ggplot2)
-library(faux)
-library(patchwork)
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(leaflet))
+suppressPackageStartupMessages(library(measurements))
+suppressPackageStartupMessages(library(popbio))
+suppressPackageStartupMessages(library(pbapply))
+suppressPackageStartupMessages(library(parallel))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(faux))
+suppressPackageStartupMessages(library(patchwork))
+
+
+start <- Sys.time()
+start
+#  ----------------------------------------------------------------------------------------------------------------------------
+# get taskID
+#  ----------------------------------------------------------------------------------------------------------------------------
+
+taskID <- as.integer(Sys.getenv("SGE_TASK_ID"))
 
 #-----------------------------------------------------------
 # Retrieve data from actual species with 2x2 matrices
 #-----------------------------------------------------------
 
 # load most current compadre database
-load('data/COMPADRE_v.X.X.X.4.RData')
+load('/data/lagged/COMPADRE_v.X.X.X.4.RData')
 
 ## For now get the data from Dalgleish - I can later decide to get all 2x2 matrices
-id <- which( grepl('Dalgleish', compadre$metadata$Author) & compadre$metadata$MatrixDimension == 2)
+id <- which(compadre$metadata$MatrixDimension == 2)
 
 ## Get all matrices for the selected id's, grouped by species
 species <- unique(compadre$metadata$SpeciesAuthor[id])
@@ -28,23 +37,23 @@ names(Amat_list) <- species
 names(Umat_list) <- species
 names(Fmat_list) <- species
 
+i = species[taskID]
 
-for(i in species){
-  id2 <- id[which(compadre$metadata$SpeciesAuthor[id] == i)]
-  # Retrieve all full matrices
-  Amat_list[[i]] <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matA))  
-  ## matrix cell position in vector -> c([1,1], [2,1], [1,2], [2,2])
-  Umat_list[[i]] <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matU))  
-  Fmat_list[[i]] <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matF))  
-  
-}
+id2 <- id[which(compadre$metadata$SpeciesAuthor[id] == i)]
+# Retrieve all full matrices
+Amat_list[[i]] <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matA))  
+## matrix cell position in vector -> c([1,1], [2,1], [1,2], [2,2])
+Umat_list[[i]] <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matU))  
+Fmat_list[[i]] <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matF))  
+
+
 
 ## Get mean and standard deviation for each cell in the 2x2 matrices (small)
 Acell_values <- lapply(Amat_list, function(x) as.data.frame(matrix(unlist(x), ncol = 4, byrow = T)) %>%
-                        `colnames<-`(c("S->S", "S->B", "B->S", "B->B")) %>%
-                        summarise(mean = apply(., 2, mean),
-                                  sd = apply(., 2, sd)) %>%
-                        `rownames<-`(c("S->S", "S->B", "B->S", "B->B"))
+                         `colnames<-`(c("S->S", "S->B", "B->S", "B->B")) %>%
+                         summarise(mean = apply(., 2, mean),
+                                   sd = apply(., 2, sd)) %>%
+                         `rownames<-`(c("S->S", "S->B", "B->S", "B->B"))
 ) 
 
 Ucell_values <- lapply(Umat_list, function(x) as.data.frame(matrix(unlist(x), ncol = 4, byrow = T)) %>%
@@ -136,7 +145,7 @@ for(i in species){
     mpm[1,1] <- Acell_values[[i]][1,1] + survival * Ucell_values[[i]][1,2]         # recruitment by small into small 
     
     mpm[2,2] <- Acell_values[[i]][4,1] + survival * Ucell_values[[i]][4,2]                   # reproduction by large into large
-      
+    
     
     #growth (but actually survival and moving to next state)
     mpm[2,1] <- Acell_values[[i]][2,1] + growth * Ucell_values[[i]][2,2]                   # recruitment by big into small 
@@ -149,35 +158,21 @@ for(i in species){
     return(mpm)  
   }
   
-  # Set up parallel runs
-  no_cores <- detectCores()
-  cl <- makeCluster(no_cores - 2)
-  ## export libraries to workers
-  clusterEvalQ(cl, c(library(popbio), library(dplyr)))
-  ## provide seed number to workers
-  # clusterSetRNGStream(cl, iseed = 04103)
   
-  ## export objects to workers
-  clusterExport(cl, c("i", "create_seq", "logit", "inv_logit", "mpm", "st.lamb", "clim_corr", "clim_sd", "Acell_values", "Fcell_values", "Ucell_values", "lag_clim"))
-
   #### Lagged effect within P "functions"
-  
-  
   lag_g <- pblapply(lag_clim,
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$lagged,
                                         env_reproduction = rep(0,length(x$recent)))
   )
   
-  lag_s <- pblapply(cl = cl,
-                    lag_clim,
+  lag_s <- pblapply(lag_clim,
                     function(x) st.lamb(env_surv = x$lagged,
                                         env_growth = x$recent,
                                         env_reproduction = rep(0,length(x$recent)))
   )
   
-  lag_n <- pblapply(cl = cl,
-                    lag_clim,
+  lag_n <- pblapply(lag_clim,
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$recent,
                                         env_reproduction = rep(0,length(x$recent)))
@@ -185,26 +180,23 @@ for(i in species){
   
   lag <- list("growth" = lag_g, "survival" = lag_s, "none" = lag_n)
   
-  saveRDS(lag, paste("results/simulations/mpm/mpm_", i, "_lag.RDS", sep = ""))
+  saveRDS(lag, paste("/work/evers/simulations/mpm_", i, "_lag.RDS", sep = ""))
   
   #### Lagged effect
   
-  lag_p <- pblapply(cl = cl, 
-                    lag_clim, 
+  lag_p <- pblapply(lag_clim, 
                     function(x) st.lamb(env_surv = x$lagged,
                                         env_growth = x$lagged,
                                         env_reproduction = x$recent)
   )
   
-  lag_f <- pblapply(cl = cl, 
-                    lag_clim, 
+  lag_f <- pblapply(lag_clim, 
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$recent,
                                         env_reproduction = x$lagged)
   )
   
-  lag_n <- pblapply(cl = cl, 
-                    lag_clim, 
+  lag_n <- pblapply(lag_clim, 
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$recent,
                                         env_reproduction = x$recent)
@@ -212,7 +204,7 @@ for(i in species){
   
   lag_fp <- list("Pkernel" = lag_p, "Fkernel" = lag_f, "none" = lag_n)
   
-  saveRDS(lag_fp, paste("results/simulations/mpm/mpm_", i, "_lagfp.RDS", sep = ""))
+  saveRDS(lag_fp, paste("work/evers/simulations/mpm/mpm_", i, "_lagfp.RDS", sep = ""))
   
   stopCluster(cl)
 }
@@ -255,36 +247,40 @@ sum_plot <- function(lag, lag_pf){
 }
 
 for(i in species) {
-
-### Load results
-
-lag <- readRDS(paste0("results/simulations/mpm/mpm_", i, "_lag.RDS"))
-lagpf <- readRDS(paste0("results/simulations/mpm/mpm_", i, "_lagfp.RDS"))
-
-plots <- sum_plot(lag, lagpf)
-
-# mat <- matrix(nrow = 2, ncol = 2, dimnames = list(c("small", "big"), c("small", "big")))
-
-## matrix cell position in vector -> c([1,1], [2,1], [1,2], [2,2])
-matss <- paste0(round(Acell_values[[i]]$mean[1], 2), " (", round(Ucell_values[[i]]$sd[1], 2), ")" )
-matsb <- paste0(round(Acell_values[[i]]$mean[2], 2), " (", round(Ucell_values[[i]]$sd[2], 2), ")" )
-matbs <- paste0(round(Acell_values[[i]]$mean[3], 2), " (", round(Ucell_values[[i]]$sd[3], 2), ")" )
-matbb <- paste0(round(Acell_values[[i]]$mean[4], 2), " (", round(Ucell_values[[i]]$sd[4], 2), ")" )
-
-## Lagged effects
-design <- "AA
+  
+  ### Load results
+  
+  lag <- readRDS(paste0("/work/evers/simulations/mpm_", i, "_lag.RDS"))
+  lagpf <- readRDS(paste0("/work/evers/simulations/mpm_", i, "_lagfp.RDS"))
+  
+  plots <- sum_plot(lag, lagpf)
+  
+  # mat <- matrix(nrow = 2, ncol = 2, dimnames = list(c("small", "big"), c("small", "big")))
+  
+  ## matrix cell position in vector -> c([1,1], [2,1], [1,2], [2,2])
+  matss <- paste0(round(Acell_values[[i]]$mean[1], 2), " (", round(Ucell_values[[i]]$sd[1], 2), ")" )
+  matsb <- paste0(round(Acell_values[[i]]$mean[2], 2), " (", round(Ucell_values[[i]]$sd[2], 2), ")" )
+  matbs <- paste0(round(Acell_values[[i]]$mean[3], 2), " (", round(Ucell_values[[i]]$sd[3], 2), ")" )
+  matbb <- paste0(round(Acell_values[[i]]$mean[4], 2), " (", round(Ucell_values[[i]]$sd[4], 2), ")" )
+  
+  ## Lagged effects
+  design <- "AA
            BB
            CD"
   
-lag <- wrap_plots(A = plots$lag, B = plots$lagpf, D = guide_area(),
-                  C = wrap_elements(grid::textGrob(
-                    substitute(atop(paste(ss, "    ", bs,), paste(sb, "    ", bb)), 
-                               env = list(ss = matss, bs = matbs,
-                                          sb = matsb, bb = matbb)))), 
-                  design = design, guides = "collect") +
-  plot_annotation(title = i) 
-
-ggsave(lag, filename = paste0("results/simulations/mpm/compadre_", i, "plots.png"))
-
-
+  lag <- wrap_plots(A = plots$lag, B = plots$lagpf, D = guide_area(),
+                    C = wrap_elements(grid::textGrob(
+                      substitute(atop(paste(ss, "    ", bs,), paste(sb, "    ", bb)), 
+                                 env = list(ss = matss, bs = matbs,
+                                            sb = matsb, bb = matbb)))), 
+                    design = design, guides = "collect") +
+    plot_annotation(title = i) 
+  
+  ggsave(lag, filename = paste0("work/evers/simulations/compadre_", i, "plots.png"))
+  
+  
 }
+
+
+
+Sys.time() - start
