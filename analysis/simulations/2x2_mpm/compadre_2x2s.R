@@ -24,8 +24,13 @@ taskID <- as.integer(Sys.getenv("SGE_TASK_ID"))
 # load most current compadre database
 load('/data/lagged/COMPADRE_v.X.X.X.4.RData')
 
-## For now get the data from Dalgleish - I can later decide to get all 2x2 matrices
-id <- which(compadre$metadata$MatrixDimension == 2)
+# Select 2x2 mpm's  ---- I should probably get more than only the Dalgleish studies, but just taking all is not a good idea either
+
+## Subsection from Dalgleish
+id <- which(grepl("Dalgleish", compadre$metadata$Authors) & compadre$metadata$MatrixDimension == 2)
+## All 2x2 mpm's 
+# id <- which(compadre$metadata$MatrixDimension == 2)
+
 
 ## Get all matrices for the selected id's, grouped by species
 species <- unique(compadre$metadata$SpeciesAuthor[id])
@@ -142,17 +147,17 @@ for(i in species){
     mpm <- matrix(0, nrow = 2, ncol = 2)
     
     # survival (but actually more like survival and staying in the same state)
-    mpm[1,1] <- Acell_values[[i]][1,1] + survival * Ucell_values[[i]][1,2]         # recruitment by small into small 
+    mpm[1,1] <- Acell_values[[i]][1,1] + survival * Ucell_values[[i]][1,2]         # + recruitment by small into small? 
     
-    mpm[2,2] <- Acell_values[[i]][4,1] + survival * Ucell_values[[i]][4,2]                   # reproduction by large into large
+    mpm[2,2] <- Acell_values[[i]][4,1] + survival * Ucell_values[[i]][4,2]                   # + reproduction by large into large?
     
     
     #growth (but actually survival and moving to next state)
-    mpm[2,1] <- Acell_values[[i]][2,1] + growth * Ucell_values[[i]][2,2]                   # recruitment by big into small 
+    mpm[2,1] <- Acell_values[[i]][2,1] + growth * Ucell_values[[i]][2,2]                   # + recruitment by small into big 
     
     
     # reproduction 
-    mpm[1,2] <- Acell_values[[i]][3,1] + reproduction * Fcell_values[[i]][3,2]                   # recruitment by big into small
+    mpm[1,2] <- Acell_values[[i]][3,1] + reproduction * Fcell_values[[i]][3,2]                   # + shrinkage from big to small?
     
     
     return(mpm)  
