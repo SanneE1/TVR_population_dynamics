@@ -24,11 +24,7 @@
 #$ -binding linear:1
 
 #create a single output directory per job
-output_dir="/work/$USER/$JOB_NAME-$JOB_ID"
-mkdir -p "$output_dir"
 
-module load foss/2018b R/3.5.1
-
-output="$output_dir"/${JOB_NAME}_${function}_${JOB_ID}_$SGE_TASK_ID.rds
+module load foss/2019b R
 
 Rscript "$HOME"/lagged_buffering/analysis/simulations/2x2_mpm/compadre_2x2.R \

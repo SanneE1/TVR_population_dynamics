@@ -1,9 +1,7 @@
 suppressPackageStartupMessages(library(dplyr))
-suppressPackageStartupMessages(library(leaflet))
 suppressPackageStartupMessages(library(measurements))
 suppressPackageStartupMessages(library(popbio))
 suppressPackageStartupMessages(library(pbapply))
-suppressPackageStartupMessages(library(parallel))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(faux))
 suppressPackageStartupMessages(library(patchwork))
@@ -38,6 +36,7 @@ names(Umat_list) <- species
 names(Fmat_list) <- species
 
 i = species[taskID]
+i
 
 id2 <- id[which(compadre$metadata$SpeciesAuthor[id] == i)]
 # Retrieve all full matrices
@@ -129,13 +128,11 @@ st.lamb <- function(env_surv, env_growth, env_reproduction) {
 clim_sd <- rep(seq(from = 0, to = 2, length.out = 10), 90)
 clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
 
-lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = clim_sd[x], clim_corr = clim_corr[x], lag = 1) %>% filter(!is.na(.)))
-
+print("creating lagged climate sequences")
+lag_clim <- pblapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = clim_sd[x], clim_corr = clim_corr[x], lag = 1) %>% filter(!is.na(.)))
+print("done")
 
 # species specific mpm
-
-for(i in species){
-  print(i)
   
   mpm <- function(survival, growth, reproduction) {
     ## Basic mpm
@@ -160,18 +157,19 @@ for(i in species){
   
   
   #### Lagged effect within P "functions"
+print("lagged effect in growth")
   lag_g <- pblapply(lag_clim,
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$lagged,
                                         env_reproduction = rep(0,length(x$recent)))
   )
-  
+print("lagged effect in survival")  
   lag_s <- pblapply(lag_clim,
                     function(x) st.lamb(env_surv = x$lagged,
                                         env_growth = x$recent,
                                         env_reproduction = rep(0,length(x$recent)))
   )
-  
+print("lagged effect control")  
   lag_n <- pblapply(lag_clim,
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$recent,
@@ -183,19 +181,19 @@ for(i in species){
   saveRDS(lag, paste("/work/evers/simulations/mpm_", i, "_lag.RDS", sep = ""))
   
   #### Lagged effect
-  
+ print("lagged effect in P kernel") 
   lag_p <- pblapply(lag_clim, 
                     function(x) st.lamb(env_surv = x$lagged,
                                         env_growth = x$lagged,
                                         env_reproduction = x$recent)
   )
-  
+ print("lagged effect in F kernel") 
   lag_f <- pblapply(lag_clim, 
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$recent,
                                         env_reproduction = x$lagged)
   )
-  
+ print("lagged effect control") 
   lag_n <- pblapply(lag_clim, 
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$recent,
@@ -204,10 +202,9 @@ for(i in species){
   
   lag_fp <- list("Pkernel" = lag_p, "Fkernel" = lag_f, "none" = lag_n)
   
-  saveRDS(lag_fp, paste("work/evers/simulations/mpm/mpm_", i, "_lagfp.RDS", sep = ""))
+  saveRDS(lag_fp, paste("/work/evers/simulations/mpm_", i, "_lagfp.RDS", sep = ""))
   
-  stopCluster(cl)
-}
+
 
 
 
@@ -215,7 +212,7 @@ for(i in species){
 #-----------------------------------------------------------
 # plot results
 #-----------------------------------------------------------
-
+print("start plotting")
 # Summary plot function for easy looping
 sum_plot <- function(lag, lag_pf){
   ### Climate variables
@@ -246,8 +243,7 @@ sum_plot <- function(lag, lag_pf){
               lagpf = lagpf_p))
 }
 
-for(i in species) {
-  
+ 
   ### Load results
   
   lag <- readRDS(paste0("/work/evers/simulations/mpm_", i, "_lag.RDS"))
@@ -277,9 +273,7 @@ for(i in species) {
     plot_annotation(title = i) 
   
   ggsave(lag, filename = paste0("work/evers/simulations/compadre_", i, "plots.png"))
-  
-  
-}
+
 
 
 
