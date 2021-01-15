@@ -5,20 +5,30 @@ library(pbapply)
 library(tidyr)
 library(ggplot2)
 
-source("analysis/simulations/Full simulation/ipmr_functions.R")
 
-params_list <- read.csv("data/simulation/perennial1_HEQU_parameters.csv") 
+# Set species to the select the different types of species-based IPMs
+# species = "HEQU"
+species = "OPIM"
+
+if(species == "HEQU") {
+  source("analysis/simulations/Full_simulation/ipmr_functions_HEQU.R")
+  params_list <- read.csv("data/simulation/perennial1_HEQU_parameters.csv") 
+  clim_list <- read.csv("data/simulation/perennial1_HEQU_climate.csv") 
+} else if (species == "OPIM") {
+  source("analysis/simulations/Full_simulation/ipmr_functions_OPIM.R")
+  params_list <- read.csv("data/simulation/perennial3_OPIM_parameters.csv") 
+  clim_list <- read.csv("data/simulation/perennial3_OPIM_climate.csv") 
+}
+
 params_list <- as.list(setNames(as.numeric(params_list$Value), params_list$Parameter))
-
-clim_list <- read.csv("data/simulation/perennial1_HEQU_climate.csv") 
 clim_list <- as.list(setNames(as.numeric(clim_list$Value), clim_list$Parameter))
 
-clim_sd <- rep(seq(from = 1, to = 2, length.out = 2), 90)
-clim_corr <- rep(rep(c(-0.9,0,0.9), each = 2), 30)
+clim_sd <- rep(seq(from = 1, to = 2, length.out = 2), 15)
+clim_corr <- rep(rep(c(-0.9,0,0.9), each = 2), 5)
 
 
 ## make clusters
-no_cores <- detectCores() - 1
+no_cores <- detectCores() - 3
 cl <- makeCluster(no_cores)
 
 ## export libraries to workers
@@ -29,8 +39,8 @@ clusterSetRNGStream(cl, iseed = 04103)
 clusterExport(cl, c("params_list", "clim_list", "clim_sd", "clim_corr", "P_lambdas", "create_seq"))
 
 lambdas <- pblapply(cl = cl,
-          as.list(c(1:250)), 
-          function(x) P_lambdas(n_it = 10000, 
+          as.list(c(1:30)), 
+          function(x) P_lambdas(n_it = 5000, 
                                 clim_sd = clim_sd[x], 
                                 clim_corr = clim_corr[x], 
                                 params_list = params_list, 

@@ -63,6 +63,7 @@ clim_par <- cli$args[3]
 
 foption
 taskID
+lag
 n_mesh
 n_it
 
