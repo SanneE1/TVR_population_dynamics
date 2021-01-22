@@ -11,20 +11,16 @@ suppressPackageStartupMessages(library(patchwork))
 
 start <- Sys.time()
 start
-#  ----------------------------------------------------------------------------------------------------------------------------
-# get taskID
-#  ----------------------------------------------------------------------------------------------------------------------------
 
 taskID <- as.integer(Sys.getenv("SGE_TASK_ID"))
-
-#-----------------------------------------------------------
-# Retrieve data from actual species with 2x2 matrices
-#-----------------------------------------------------------
 
 # load most current compadre database
 load('/data/lagged/COMPADRE_v.X.X.X.4.RData')
 
+
+#-----------------------------------------------------------
 # Select mpm's 
+#-----------------------------------------------------------
 
 ## Subsection from Dalgleish
 id <- which(compadre$metadata$MatrixDimension == 4)
@@ -111,7 +107,7 @@ st.lamb <- function(growth, reproduction){
   env <- as.list(as.data.frame(t(env)))
   
   ### Get all mpm's
-  mats <- lapply(env, function(x) mpm(x[1], x[2]))
+  mats <- lapply(env, function(x) mpm(U_clim = x[1],F_clim = x[2]))
   
   
   lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim
@@ -126,10 +122,10 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
 
 
 # species specific mpm
-  mpm <- function(growth, reproduction) {
+  mpm <- function(U_clim, F_clim, signal_strength_U = 1, signal_strength_F = 1) {
     
-    Umat <- Ucell_values$mean + Ucell_values$sd * growth
-    Fmat <- Fcell_values$mean + Fcell_values$sd * reproduction
+    Umat <- Ucell_values$mean + Ucell_values$sd * (U_clim * signal_strength_U)
+    Fmat <- Fcell_values$mean + Fcell_values$sd * (F_clim * signal_strength_F)
     
     Amat <- Umat + Fmat
     
@@ -147,13 +143,13 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
   )
   
   lag_f <- pblapply(lag_clim, 
-                    function(x) st.lamb(env_growth = x$recent,
-                                        env_reproduction = x$lagged)
+                    function(x) st.lamb(growth = x$recent,
+                                        reproduction = x$lagged)
   )
   
   lag_n <- pblapply(lag_clim, 
-                    function(x) st.lamb(env_growth = x$recent,
-                                        env_reproduction = x$recent)
+                    function(x) st.lamb(growth = x$recent,
+                                        reproduction = x$recent)
   )
   
   lag_uf <- list("Pkernel" = lag_p, "Fkernel" = lag_f, "none" = lag_n)
