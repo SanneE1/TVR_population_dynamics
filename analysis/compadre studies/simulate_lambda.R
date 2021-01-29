@@ -1,35 +1,51 @@
 suppressPackageStartupMessages(library(dplyr))
-# suppressPackageStartupMessages(library(leaflet))
-# suppressPackageStartupMessages(library(measurements))
 suppressPackageStartupMessages(library(popbio))
 suppressPackageStartupMessages(library(pbapply))
-# suppressPackageStartupMessages(library(parallel))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(faux))
 suppressPackageStartupMessages(library(patchwork))
-
+suppressPackageStartupMessages(library(Rage))
 
 start <- Sys.time()
 start
 
 taskID <- as.integer(Sys.getenv("SGE_TASK_ID"))
 
+
+### Species_author for this specific run ------------ STILL NEEDS WORK!!!! ------------
+
+args() = commandArgs(TRUE)  ## should be a location for the csv with Species_author
+
+if(length(args) == 0) {
+  stop("Supply csv file with Species_authors", call. = FALSE)
+}
+
+
 # load most current compadre database
 load('/data/lagged/COMPADRE_v.X.X.X.4.RData')
 
+## Selection ids of Species_author
+species <- read.csv(args[1])
+
+i = species[taskID]
+
+id <- which(compadre$metadata$SpeciesAuthor == i)
+
+
+# Required functions
+
+logit <- function(x) log(x/(1-x))
+
+inv_logit <- function(x) {
+  return(
+    1/(1 + exp(-(x)))
+  )
+}
 
 #-----------------------------------------------------------
 # Select mpm's 
 #-----------------------------------------------------------
 
-## Subsection from Dalgleish
-id <- which(compadre$metadata$MatrixDimension == 4)
-
-
-## Get all matrices for the selected id's, grouped by species
-species <- unique(compadre$metadata$SpeciesAuthor[id])
-
-i = species[taskID]
 
 id2 <- id[which(compadre$metadata$SpeciesAuthor[id] == i & compadre$metadata$MatrixComposite[id] == "Individual")]
 # Retrieve all full matrices
@@ -51,13 +67,19 @@ Acell_values <- Amats %>%
   summarise(mean = apply(., 1, mean),
             sd = apply(., 1, sd))
 
-Ucell_values <- Umats %>%
+Ucell_values <- (Umats) %>%
+  mutate(across(everything(), ~ case_when(. > 6 ~ 6,
+                                          . < -6 ~ -6,
+                                          between(., -6, 6) ~ .))) %>%
   summarise(mean = apply(., 1, mean),
             sd = apply(., 1, sd))
 
-Fcell_values <- Fmats %>%
+Fcell_values <- (Fmats) %>%
+  mutate(across(everything(), ~ case_when(. < -12 ~ -12,
+                                          . >= -12 ~ .))) %>%
   summarise(mean = apply(., 1, mean),
             sd = apply(., 1, sd))
+
 
 
 
@@ -67,14 +89,6 @@ Fcell_values <- Fmats %>%
 
 ## create stochastic climate sensitive mpm's from the data
 ## I assume that the sd in the cell variables is the climate effects
-
-logit <- function(x) log(x/(1-x))
-
-inv_logit <- function(x) {
-  return(
-    1/(1 + exp(-(x)))
-  )
-}
 
 ### Create environmental sequence ----------------------------
 create_seq <- function(n_it, clim_sd, clim_corr, lag) { 
@@ -124,8 +138,8 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
 # species specific mpm
   mpm <- function(U_clim, F_clim, signal_strength_U = 1, signal_strength_F = 1) {
     
-    Umat <- Ucell_values$mean + Ucell_values$sd * (U_clim * signal_strength_U)
-    Fmat <- Fcell_values$mean + Fcell_values$sd * (F_clim * signal_strength_F)
+    Umat <- (Ucell_values$mean + Ucell_values$sd * (U_clim * signal_strength_U))
+    Fmat <- (Fcell_values$mean + Fcell_values$sd * (F_clim * signal_strength_F))
     
     Amat <- Umat + Fmat
     
@@ -152,35 +166,32 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
                                         reproduction = x$recent)
   )
   
-  lag_uf <- list("Pkernel" = lag_p, "Fkernel" = lag_f, "none" = lag_n)
+  lag_uf <- list("Umatrix" = lag_u, "Fmatrix" = lag_f, "None" = lag_n)
   
-  saveRDS(lag_fp, paste("work/evers/simulations/mpm/mpm_", i, "_laguf.RDS", sep = ""))
+  saveRDS(lag_uf, paste("work/evers/simulations/mpm/mpm_", i, "_laguf.RDS", sep = ""))
 
 
 
 
-#-----------------------------------------------------------
-# plot results
-#-----------------------------------------------------------
-
-  laguf_df <- data.frame(clim_sd = clim_sd,
-                         clim_corr = clim_corr,
-                         lambda = unlist(lag_pf),
-                         type = rep(names(lag_pf), each = length(lag_pf[[1]])))
-  lagpf_p <- ggplot(lagpf_df) + geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
-    labs(colour = "Lag type", title = "Lagged climate in P or F") +
-    facet_grid(cols = vars(clim_corr)) + 
-    theme(legend.position = "bottom",
-          plot.title = element_text(hjust = 0.5))
+# #-----------------------------------------------------------
+# # plot results
+# #-----------------------------------------------------------
+# 
+#   laguf_df <- data.frame(clim_sd = clim_sd,
+#                          clim_corr = clim_corr,
+#                          lambda = unlist(lag_uf),
+#                          type = rep(names(lag_uf), each = length(lag_uf[[1]])))
+#   lagpf_p <- ggplot(laguf_df) + geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
+#     labs(colour = "Lag type", title = "Lagged climate in P or F") +
+#     facet_grid(cols = vars(clim_corr)) + 
+#     theme(legend.position = "bottom",
+#           plot.title = element_text(hjust = 0.5)) +
+#     plot_annotation(title = i) 
+#   
+#   ggsave(lag, filename = paste0("work/evers/simulations/compadre_", i, "plots.png"))
+#   
   
 
-
-    plot_annotation(title = i) 
-  
-  ggsave(lag, filename = paste0("work/evers/simulations/compadre_", i, "plots.png"))
-  
-  
-}
 
 
 
