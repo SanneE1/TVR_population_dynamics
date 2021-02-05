@@ -9,26 +9,22 @@ suppressPackageStartupMessages(library(Rage))
 start <- Sys.time()
 start
 
-taskID <- as.integer(Sys.getenv("SGE_TASK_ID"))
+taskID <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+print(paste("TASKID:", taskID))
 
+args <- commandArgs(TRUE)
+args
 
-### Species_author for this specific run ------------ STILL NEEDS WORK!!!! ------------
-
-args() = commandArgs(TRUE)  ## should be a location for the csv with Species_author
-
-if(length(args) == 0) {
-  stop("Supply csv file with Species_authors", call. = FALSE)
-}
-
+### Species_author for this specific run 
 
 # load most current compadre database
 load('/data/lagged/COMPADRE_v.X.X.X.4.RData')
 
 ## Selection ids of Species_author
-species <- read.csv(args[1])
+species <- read.csv(args[1], header = F)
+species <- as.vector(species[,1])
 
 i = species[taskID]
-
 id <- which(compadre$metadata$SpeciesAuthor == i)
 
 
@@ -60,6 +56,7 @@ if(length(unique(compadre$metadata$MatrixDimension[id2])) != 1) {
 
 dim <- unique(compadre$metadata$MatrixDimension[id2])
 
+print(paste("dim =", dim))
 
 
 ## Get mean and standard deviation for each cell in the matrices ()
@@ -168,9 +165,10 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
   
   lag_uf <- list("Umatrix" = lag_u, "Fmatrix" = lag_f, "None" = lag_n)
   
-  saveRDS(lag_uf, paste("work/evers/simulations/mpm/mpm_", i, "_laguf.RDS", sep = ""))
+output_dir <- args[2]
+output_file <- paste0("mpm_", i, "_laguf.RDS")
 
-
+saveRDS(lag_uf, file.path(output_dir, output_file))
 
 
 # #-----------------------------------------------------------
@@ -188,7 +186,7 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
 #           plot.title = element_text(hjust = 0.5)) +
 #     plot_annotation(title = i) 
 #   
-#   ggsave(lag, filename = paste0("work/evers/simulations/compadre_", i, "plots.png"))
+#   ggsave(lag, filename = paste0(args[2], /mpm_", i, "_plots.png"))
 #   
   
 
