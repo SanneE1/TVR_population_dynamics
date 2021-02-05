@@ -9,10 +9,14 @@ suppressPackageStartupMessages(library(Rage))
 start <- Sys.time()
 start
 
-taskID <- as.integer(Sys.getenv("SGE_TASK_ID"))
+taskID <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+print(paste("TASKID:", taskID))
 
+args <- commandArgs(TRUE)
+args
 
 ### Species_author for this specific run 
+<<<<<<< HEAD:analysis/compadre studies/simulate_lambda.R
 
 args() = commandArgs(TRUE)  ## should be a location for the csv with Species_author
 
@@ -20,17 +24,25 @@ if(length(args) == 0) {
   stop("Supply csv file with Species_authors", call. = FALSE)
 }
 
+=======
+>>>>>>> 1fc297c57110465180f9766b8531f20963536dc5:analysis/compadre_studies/simulate_lambda.R
 
 # load most current compadre database
 load('/data/lagged/COMPADRE_v.X.X.X.4.RData')
 
 ## Selection ids of Species_author
-species <- read.csv(args[1])
+species <- read.csv(args[1], header = F)
+species <- as.vector(species[,1])
 
+<<<<<<< HEAD:analysis/compadre studies/simulate_lambda.R
 i = species$SpeciesAuthor[taskID]
 j = species$MatrixPopulation[taskID]
 
 id <- which(compadre$metadata$SpeciesAuthor == i & compadre$metadata$MatrixPopulation == j)
+=======
+i = species[taskID]
+id <- which(compadre$metadata$SpeciesAuthor == i)
+>>>>>>> 1fc297c57110465180f9766b8531f20963536dc5:analysis/compadre_studies/simulate_lambda.R
 
 
 # Required functions
@@ -58,9 +70,13 @@ Fmats <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matF)) 
 
 dim <- unique(compadre$metadata$MatrixDimension[id2])
 
+<<<<<<< HEAD:analysis/compadre studies/simulate_lambda.R
 if(dim != 1) {
   stop("different sized matrices in same study")
 }
+=======
+print(paste("dim =", dim))
+>>>>>>> 1fc297c57110465180f9766b8531f20963536dc5:analysis/compadre_studies/simulate_lambda.R
 
 
 ## Get mean and standard deviation for each cell in the matrices ()
@@ -172,9 +188,10 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
   
   lag_uf <- list("Umatrix" = lag_u, "Fmatrix" = lag_f, "None" = lag_n)
   
-  saveRDS(lag_uf, paste("work/evers/simulations/mpm/mpm_", i, "_laguf.RDS", sep = ""))
+output_dir <- args[2]
+output_file <- paste0("mpm_", i, "_laguf.RDS")
 
-
+saveRDS(lag_uf, file.path(output_dir, output_file))
 
 
 # #-----------------------------------------------------------
@@ -192,7 +209,7 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
 #           plot.title = element_text(hjust = 0.5)) +
 #     plot_annotation(title = i) 
 #   
-#   ggsave(lag, filename = paste0("work/evers/simulations/compadre_", i, "plots.png"))
+#   ggsave(lag, filename = paste0(args[2], /mpm_", i, "_plots.png"))
 #   
   
 
