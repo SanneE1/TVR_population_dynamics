@@ -12,7 +12,7 @@ start
 taskID <- as.integer(Sys.getenv("SGE_TASK_ID"))
 
 
-### Species_author for this specific run ------------ STILL NEEDS WORK!!!! ------------
+### Species_author for this specific run 
 
 args() = commandArgs(TRUE)  ## should be a location for the csv with Species_author
 
@@ -27,9 +27,10 @@ load('/data/lagged/COMPADRE_v.X.X.X.4.RData')
 ## Selection ids of Species_author
 species <- read.csv(args[1])
 
-i = species[taskID]
+i = species$SpeciesAuthor[taskID]
+j = species$MatrixPopulation[taskID]
 
-id <- which(compadre$metadata$SpeciesAuthor == i)
+id <- which(compadre$metadata$SpeciesAuthor == i & compadre$metadata$MatrixPopulation == j)
 
 
 # Required functions
@@ -54,31 +55,34 @@ Amats <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matA)) 
 Umats <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matU)) %>% bind_cols 
 Fmats <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matF)) %>% bind_cols
 
-if(length(unique(compadre$metadata$MatrixDimension[id2])) != 1) {
-  stop("different sized matrices in same study")
-}
 
 dim <- unique(compadre$metadata$MatrixDimension[id2])
 
+if(dim != 1) {
+  stop("different sized matrices in same study")
+}
 
 
 ## Get mean and standard deviation for each cell in the matrices ()
 Acell_values <- Amats %>%
   summarise(mean = apply(., 1, mean),
-            sd = apply(., 1, sd))
+            sd = apply(., 1, sd))%>%
+  mutate(across(everything(), ~ replace(., is.na(.), 0)))
 
 Ucell_values <- (Umats) %>%
   mutate(across(everything(), ~ case_when(. > 6 ~ 6,
                                           . < -6 ~ -6,
                                           between(., -6, 6) ~ .))) %>%
   summarise(mean = apply(., 1, mean),
-            sd = apply(., 1, sd))
+            sd = apply(., 1, sd))%>%
+  mutate(across(everything(), ~ replace(., is.na(.), 0)))
 
 Fcell_values <- (Fmats) %>%
   mutate(across(everything(), ~ case_when(. < -12 ~ -12,
                                           . >= -12 ~ .))) %>%
   summarise(mean = apply(., 1, mean),
-            sd = apply(., 1, sd))
+            sd = apply(., 1, sd))%>%
+  mutate(across(everything(), ~ replace(., is.na(.), 0)))
 
 
 
