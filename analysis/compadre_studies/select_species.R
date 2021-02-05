@@ -123,6 +123,6 @@ LH <- map2(multiple_Ind$SpeciesAuthor, multiple_Ind$MatrixPopulation, get_all) %
 
 species <- left_join(multiple_Ind, LH)
 
-write.csv(species, "data/species_authors.csv")
+write.csv(species, "data/species_authors.csv", row.names = F)
 
 
