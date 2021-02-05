@@ -55,7 +55,7 @@ Fmats <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matF)) 
 
 dim <- unique(compadre$metadata$MatrixDimension[id2])
 
-if(dim != 1) {
+if(length(dim) != 1) {
   stop("different sized matrices in same study")
 }
 
@@ -171,7 +171,14 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
   lag_uf <- list("Umatrix" = lag_u, "Fmatrix" = lag_f, "None" = lag_n)
   
 output_dir <- args[2]
-output_file <- paste0("mpm_", i, "_laguf.RDS")
+
+n_pop = length(unique(species$MatrixPopulation[which(species$SpeciesAuthor == i)]))
+
+if(length(n_pop == 1)) {
+  output_file <- paste0("mpm_", i, "_laguf.RDS")
+} else {
+  output_file <- paste("mpm", i, j, "laguf.RDS", sep = "_")
+}
 
 saveRDS(lag_uf, file.path(output_dir, output_file))
 
