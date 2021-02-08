@@ -22,7 +22,7 @@ if(length(args) == 0) {
 load('/data/lagged/COMPADRE_v.X.X.X.4.RData')
 
 ## Selection ids of Species_author
-species <- read.csv(args[1], row.names = F)
+species <- read.csv(args[1])
 
 i = species$SpeciesAuthor[taskID]
 j = species$MatrixPopulation[taskID]
