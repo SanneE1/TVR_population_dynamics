@@ -68,7 +68,7 @@ Acell_values <- Amats %>%
             sd = apply(., 1, sd))%>%
   mutate(across(everything(), ~ replace(., is.na(.), 0)))
 
-Ucell_values <- (Umats) %>%
+Ucell_values <- logit(Umats) %>%
   mutate(across(everything(), ~ case_when(. > 6 ~ 6,
                                           . < -6 ~ -6,
                                           between(., -6, 6) ~ .))) %>%
@@ -76,7 +76,7 @@ Ucell_values <- (Umats) %>%
             sd = apply(., 1, sd))%>%
   mutate(across(everything(), ~ replace(., is.na(.), 0)))
 
-Fcell_values <- (Fmats) %>%
+Fcell_values <- log(Fmats) %>%
   mutate(across(everything(), ~ case_when(. < -12 ~ -12,
                                           . >= -12 ~ .))) %>%
   summarise(mean = apply(., 1, mean),
@@ -126,7 +126,7 @@ st.lamb <- function(growth, reproduction){
   mats <- lapply(env, function(x) mpm(U_clim = x[1],F_clim = x[2]))
   
   
-  lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim
+  lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)
   
   return(lambda)
 }
@@ -134,14 +134,14 @@ st.lamb <- function(growth, reproduction){
 clim_sd <- rep(seq(from = 0, to = 2, length.out = 10), 90)
 clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
 
-lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = clim_sd[x], clim_corr = clim_corr[x], lag = 1) %>% filter(!is.na(.)))
+lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(500, clim_sd = clim_sd[x], clim_corr = clim_corr[x], lag = 1) %>% filter(!is.na(.)))
 
 
 # species specific mpm
   mpm <- function(U_clim, F_clim, signal_strength_U = 1, signal_strength_F = 1) {
     
-    Umat <- (Ucell_values$mean + Ucell_values$sd * (U_clim * signal_strength_U))
-    Fmat <- (Fcell_values$mean + Fcell_values$sd * (F_clim * signal_strength_F))
+    Umat <- inv_logit(Ucell_values$mean + Ucell_values$sd * (U_clim * signal_strength_U))
+    Fmat <- exp(Fcell_values$mean + Fcell_values$sd * (F_clim * signal_strength_F))
     
     Amat <- Umat + Fmat
     
