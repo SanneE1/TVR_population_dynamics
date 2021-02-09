@@ -168,7 +168,18 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
                                         reproduction = x$recent)
   )
   
-  lag_uf <- list("Umatrix" = lag_u, "Fmatrix" = lag_f, "None" = lag_n)
+  lag_uf <- list("Umatrix" = data.frame(lambda = lag_u %>% unlist,
+                                        type = rep("Umatrix", length(clim_sd)),
+                                        clim_sd = clim_sd,
+                                        clim_auto = clim_corr),
+                 "Fmatrix" = data.frame(lambda = lag_f %>% unlist,
+                                        type = rep("Fmatrix", length(clim_sd)),
+                                        clim_sd = clim_sd,
+                                        clim_auto = clim_corr),
+                 "None" = data.frame(lambda = lag_n %>% unlist,
+                                     type = rep("None", length(clim_sd)),
+                                     clim_sd = clim_sd,
+                                     clim_auto = clim_corr))
   
 output_dir <- args[2]
 
@@ -181,28 +192,5 @@ if(length(n_pop == 1)) {
 }
 
 saveRDS(lag_uf, file.path(output_dir, output_file))
-
-
-# #-----------------------------------------------------------
-# # plot results
-# #-----------------------------------------------------------
-# 
-#   laguf_df <- data.frame(clim_sd = clim_sd,
-#                          clim_corr = clim_corr,
-#                          lambda = unlist(lag_uf),
-#                          type = rep(names(lag_uf), each = length(lag_uf[[1]])))
-#   lagpf_p <- ggplot(laguf_df) + geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
-#     labs(colour = "Lag type", title = "Lagged climate in P or F") +
-#     facet_grid(cols = vars(clim_corr)) + 
-#     theme(legend.position = "bottom",
-#           plot.title = element_text(hjust = 0.5)) +
-#     plot_annotation(title = i) 
-#   
-#   ggsave(lag, filename = paste0(args[2], /mpm_", i, "_plots.png"))
-#   
-  
-
-
-
 
 Sys.time() - start
