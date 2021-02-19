@@ -151,10 +151,11 @@ file.remove( paste0(pp_v, '/', file_r) )
 file.remove( pp_v, recursive=T )
 
 
-# print(clim_df)
-# paste0(out_file, '_slice_',job_n,'.csv')
-
 # put it all out
 write.csv(clim_df,
-          paste0(out_file, '_slice_',job_n,'.csv'),
+          file.path(out_file, 'All_populations.csv'),
           row.names=F)
+
+pop_clim <- split(clim_df, list(clim_df$SpeciesAuthor, clim_df$MatrixPopulation), drop = T)
+
+str(pop_clim)
