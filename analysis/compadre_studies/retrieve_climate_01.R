@@ -79,9 +79,6 @@ all <- data.frame(Latitude = NA,
                   value = NA)
 
 
-for (job_n in c(1:nrow(chelsa_df))) {
-  
-  print(job_n)
   # get all file links (from file name)
   file_names <- sapply( job_n, produce_file_name)
   file_links <- paste0( read_dir, file_names)
@@ -166,14 +163,9 @@ for (job_n in c(1:nrow(chelsa_df))) {
   
   all <- rbind(all, clim_df)
   
-}
-
 
 # put it all out
 write.csv(all,
-          file.path(out_file, 'All_populations.csv'),
+          file.path(out_file, paste0('All_populations_', job_n,'.csv')),
           row.names=F)
 
-pop_clim <- split(clim_df, list(clim_df$SpeciesAuthor, clim_df$MatrixPopulation), drop = T)
-
-str(pop_clim)
