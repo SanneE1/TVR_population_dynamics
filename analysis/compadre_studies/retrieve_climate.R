@@ -12,7 +12,7 @@ library(RCurl)
 args     <- commandArgs(trailingOnly = TRUE)
 
 # climate variable
-job_n    <- 1
+job_n    <- c(1:12)
 out_file <- args[1]
 
 # pipe-able Reduce_rbind and grep functions
@@ -22,11 +22,11 @@ rbind_l     <- function(df_list){ Reduce(function(...) rbind(...), df_list) }
 # 1. set up lat/lon data ------------------------------------------------------
 
 # coord
-coord_df <- read.csv('data/lagged/species_authors.csv',
+coord_df <- read.csv('/data/lagged/species_authors.csv',
                      stringsAsFactors = F) %>% 
-              dplyr::select( Latitude, Longitude ) %>% 
-              mutate( Longitude = as.numeric(Longitude),
-                      Latitude  = as.numeric(Latitude) )
+              dplyr::select( Lat, Lon, SpeciesAuthor, MatrixPopulation ) %>% 
+              rename( Longitude = Lon,
+                      Latitude  = Lat )
 
 # site coord MATRIX (to feed "raster")
 site_coord <-  matrix(c(coord_df$Longitude,
