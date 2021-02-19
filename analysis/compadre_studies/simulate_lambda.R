@@ -27,8 +27,12 @@ species <- read.csv(args[1])
 i = species$SpeciesAuthor[taskID]
 j = species$MatrixPopulation[taskID]
 
+if(!is.na(j)){
 id <- which(compadre$metadata$SpeciesAuthor == i & compadre$metadata$MatrixPopulation == j)
-
+} else {
+  id <- which(compadre$metadata$SpeciesAuthor == i)
+  
+}
 
 # Required functions
 
@@ -68,18 +72,13 @@ Acell_values <- Amats %>%
             sd = apply(., 1, sd))%>%
   mutate(across(everything(), ~ replace(., is.na(.), 0)))
 
-Ucell_values <- logit(Umats) %>%
-  mutate(across(everything(), ~ case_when(. > 12 ~ 12,
-                                          . < -12 ~ -12,
-                                          between(., -12, 12) ~ .))) %>%
+Ucell_values <- Umats %>% 
   summarise(mean = apply(., 1, mean),
             sd = apply(., 1, sd))%>%
   mutate(across(everything(), ~ replace(., is.na(.), 0)))
 
-Fcell_values <- log(Fmats) %>%
-  mutate(across(everything(), ~ case_when(. < -12 ~ -12,
-                                          . >= -12 ~ .))) %>%
-  summarise(mean = apply(., 1, mean),
+Fcell_values <- Fmats %>% 
+   summarise(mean = apply(., 1, mean),
             sd = apply(., 1, sd))%>%
   mutate(across(everything(), ~ replace(., is.na(.), 0)))
 
@@ -108,7 +107,7 @@ create_seq <- function(n_it, clim_sd, clim_corr, lag) {
                    lagged = lagged)
   return(df)
 }
-
+ 
 # "Stocastic" mpm -----------------------------------
 
 st.lamb <- function(growth, reproduction){
@@ -120,18 +119,19 @@ st.lamb <- function(growth, reproduction){
   
   env <- env[complete.cases(env), ]
   
-  env <- as.list(as.data.frame(t(env)))
+  env <- split(env, seq(nrow(env)))
   
   ### Get all mpm's
-  mats <- lapply(env, function(x) mpm(U_clim = x[1],F_clim = x[2]))
-  
+  mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction))
   
   lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim
   
-  return(lambda)
+  return(data.frame(lambda = lambda,
+                    clim_sd = sd(growth, na.rm = T),
+                    clim_auto = round(acf(growth, plot = F, na.action = na.pass)$acf[2], digits = 3)))
 }
 
-clim_sd <- rep(seq(from = 0, to = 2, length.out = 10), 90)
+clim_sd <- rep(seq(from = 0.01, to = 2, length.out = 10), 90)
 clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
 
 lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = clim_sd[x], clim_corr = clim_corr[x], lag = 1) %>% filter(!is.na(.)))
@@ -140,13 +140,22 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
 # species specific mpm
   mpm <- function(U_clim, F_clim, signal_strength_U = 1, signal_strength_F = 1) {
     
-    Umat <- inv_logit(Ucell_values$mean + Ucell_values$sd * (U_clim * signal_strength_U) + rnorm(1, sd = 1-signal_strength_U))
-    Fmat <- exp(Fcell_values$mean + Fcell_values$sd * (F_clim * signal_strength_F))
+    Umat <- Ucell_values$mean + Ucell_values$sd * (U_clim * signal_strength_U) + 
+      rnorm(n = length(Ucell_values$sd),
+        mean = 0, sd = (Ucell_values$sd * (1-signal_strength_U))) 
+    Fmat <- Fcell_values$mean + Fcell_values$sd * (F_clim * signal_strength_F) + 
+      rnorm(n = length(Fcell_values$sd),
+            mean = 0, sd = (Fcell_values$sd * (1-signal_strength_F))) 
     
+    Umat <- case_when(Umat < 0 ~ 0,
+                      Umat > 1 ~ 1,
+                      between(Umat, 0, 1) ~ Umat)
+
+    Fmat <- case_when(Fmat <= 0 ~ 0,
+                      Fmat > 0 ~ Fmat)
     Amat <- Umat + Fmat
-    
     mpm <- matrix(Amat, nrow = dim)
-    
+  
     return(mpm)  
   }
 
@@ -156,30 +165,24 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
   lag_u <- pblapply(lag_clim, 
                     function(x) st.lamb(growth = x$lagged,
                                         reproduction = x$recent)
-  )
+  ) %>% bind_rows
   
   lag_f <- pblapply(lag_clim, 
                     function(x) st.lamb(growth = x$recent,
                                         reproduction = x$lagged)
-  )
+  ) %>% bind_rows
   
   lag_n <- pblapply(lag_clim, 
                     function(x) st.lamb(growth = x$recent,
                                         reproduction = x$recent)
-  )
+  ) %>% bind_rows
   
-  lag_uf <- list("Umatrix" = data.frame(lambda = lag_u %>% unlist,
-                                        type = rep("Umatrix", length(clim_sd)),
-                                        clim_sd = clim_sd,
-                                        clim_auto = clim_corr),
-                 "Fmatrix" = data.frame(lambda = lag_f %>% unlist,
-                                        type = rep("Fmatrix", length(clim_sd)),
-                                        clim_sd = clim_sd,
-                                        clim_auto = clim_corr),
-                 "None" = data.frame(lambda = lag_n %>% unlist,
-                                     type = rep("None", length(clim_sd)),
-                                     clim_sd = clim_sd,
-                                     clim_auto = clim_corr))
+  lag_uf <- list("Umatrix" = data.frame(lag_u,
+                                        type = "Umatrix"),
+                 "Fmatrix" = data.frame(lag_f,
+                                        type = "Fmatrix"),
+                 "None" = data.frame(lag_n,
+                                     type = "None"))
   
 output_dir <- args[2]
 
