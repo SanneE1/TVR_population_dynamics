@@ -2,10 +2,10 @@
 
 #SBATCH -D /work/evers/
 
-#SBATCH -o /work/%u/%x-%A-%a.log
+#SBATCH -o /work/%u/%x-%A.log
 
 #Specify job name
-#SBATCH -J mpms_compadre
+#SBATCH -J mpms_climate
 
 #Resources
 # max running time
