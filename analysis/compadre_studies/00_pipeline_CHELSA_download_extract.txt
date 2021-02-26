@@ -1,0 +1,14 @@
+# Run 01_create_CHELSA_links.R yourself, either on EVE or locally (and transfer file) 
+# You can then use the lines below any time you need to extract information, as long as you have the CHELSA files still downloaded
+
+# ALWAYS look at the 02 log files. Any corrupted files will be printed there, but the extraction (should) keeps going.
+#If any fail, you will have to redownload those.
+
+# 03 waits until 02 is finished with OK status. IF 02 failes, 03 will never start and you need to remove it completely. 
+# I'm pretty sure 03 will also start if there are corrupted files in 02 as 02 should keep going if it encounters corrupted files
+
+#R scripts start with comments on what needs to be changed for other situations
+#Submission below of #03 requires additional arguments. See .sh file for details
+
+job_2=$(sbatch -t 08:00:00 --constraint=download --parsable analysis/compadre_studies/02_submit_chelsa_download.sh) 
+sbatch --dependency=afterok:${job_2} analysis/compadre_studies/03_submit_extract_climate.sh /data/lagged/CHELSA analysis/compadre_studies/CHELSA_files.txt

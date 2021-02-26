@@ -1,13 +1,16 @@
 ## Create file with download links for all required CHELSA files 
 ## Will be used in the wget download command
+## Customization:
+## Change chelsa_df for what you need 
+## Check that download adress (L19) is still correct
+## Change location of text file output location in L36
 
 library(dplyr)
 
 # what do I need from CHELSA?
-chelsa_df <- expand.grid( variable = c('prec'), #, 'tmax', 'tmin'),
+chelsa_df <- expand.grid( variable = c('prec', 'tmax', 'tmin'),
                           year     = c(1990:2010),
                           month    = c(paste0(1:9),
-                                       # month    = c(paste0('0',1:9),
                                        10,11,12),
                           stringsAsFactors = F) %>%
   arrange(variable, year, month)
