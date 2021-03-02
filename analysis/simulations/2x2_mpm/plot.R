@@ -3,7 +3,10 @@ library(dplyr)
 library(patchwork)
 
 
-sum_plot <- function(auto, cov, lag, lag_pf){
+
+## lambda summary plot -------------------------------------
+
+sum_plot <- function(auto, cov, lag, lag_pf, sig.strength, save = T){
   ### Climate variables
   clim_sd <- rep(seq(from = 0, to = 2, length.out = 10), 90)
   clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
@@ -12,98 +15,84 @@ sum_plot <- function(auto, cov, lag, lag_pf){
                         clim_corr = clim_corr,
                         lambda = unlist(auto))
     auto_p <- ggplot(auto_df) + geom_smooth(aes(x = clim_sd, y = lambda, linetype = as.factor(clim_corr)), colour = "grey30") + 
-      labs(linetype = "Climate autocorrelation", title = "Autocorrelation \nin growth")
+      labs(linetype = "Climate \nautocorrelation", title = "Autocorrelation \nin growth") 
   
   cov_df <- data.frame(clim_sd = clim_sd,
                        clim_corr = clim_corr,
                        lambda = unlist(cov))
   cov_p <- ggplot(cov_df) + geom_smooth(aes(x = clim_sd, y = lambda, linetype = as.factor(clim_corr)), colour = "grey30")+ 
-    labs(linetype = "Climate autocorrelation", title = "Covariance in \nsurvival & growth")
+    labs(linetype = "Climate \nautocorrelation", title = "Covariance in \nsurvival & growth")
   
   lag_df <- data.frame(clim_sd = clim_sd,
                        clim_corr = clim_corr,
                        lambda = unlist(lag),
                        type = rep(names(lag), each = length(lag[[1]])))
     lag_p <- ggplot(lag_df) + geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
-      labs(colour = "Lag type", title = "Lagged climate in growth \nor survival") +
-      facet_grid(cols = vars(clim_corr))
+      labs(colour = "Lag type", title = "Lagged climate in growth or survival") +
+      facet_grid(cols = vars(clim_corr))  
   
    lagpf_df <- data.frame(clim_sd = clim_sd,
                         clim_corr = clim_corr,
                         lambda = unlist(lag_pf),
                         type = rep(names(lag_pf), each = length(lag_pf[[1]])))
    lagpf_p <- ggplot(lagpf_df) + geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
-     labs(colour = "Lag type", title = "Lagged climate in P \nor F") +
-     facet_grid(cols = vars(clim_corr))
-    
-  return(list(auto = auto_p,
-              cov = cov_p, 
-              lag = lag_p,
-              lagpf = lagpf_p))
+     labs(colour = "Lag type", title = "Lagged climate in P or F") +
+     facet_grid(cols = vars(clim_corr)) + scale_colour_manual(values = c("#00AFBB", "#E7B800", "#FC4E07"))
+  
+  plot_AC <- auto_p + cov_p + plot_layout(guides = "collect") + plot_annotation(title = paste("Climate signal strenth =", sig.strength))
+  plot_lag <-  (lag_p / lagpf_p) + plot_layout(guides = "collect") + plot_annotation(title = paste("Climate signal strenth =", sig.strength))
+  
+  if(save) {
+  ggsave(filename = file.path("results/simulations/mpm/", paste0("auto_cov_plot_signal_strength_", sig.strength, ".png")), 
+         plot_AC)
+    ggsave(filename = file.path("results/simulations/mpm/", paste0("lag_plot_signal_strength_", sig.strength, ".png")), 
+           plot_lag)
+  }
+  
+  return(list(plot_AC = plot_AC, 
+              plot_lag = plot_lag))
 }
 
+## function to create dataset formate needed and plot cell values --------------------------
+
+plot_cell <- function(mats, title) {
+  values <- rbind(low = mats[[2]]$mats, medium = mats[[6]]$mats, high = mats[[10]]$mats) %>% 
+    tibble::rownames_to_column(., "SD") %>% 
+    mutate(SD = regmatches(SD, regexpr("^[[:lower:]]{3}", SD))) %>% 
+    pivot_longer(cols = -SD, names_to = "cell", values_to = "value")
+  
+  plot <- ggplot(values, aes(value, fill = SD, colour = SD)) + 
+    geom_histogram(position = "dodge") + facet_wrap(vars(cell), scales = "free") +
+    scale_y_log10() + ggtitle(title)
+  
+  return(plot)
+}
+
+
 ### Load results
-
-# positive -> s = inv_logit(climate), g = inv_logit(climate), f = exp(1.2)
-auto <- readRDS("results/simulations/mpm/mpm_1_auto.RDS")
-cov <- readRDS("results/simulations/mpm/mpm_1_cov.RDS")
-lag <- readRDS("results/simulations/mpm/mpm_1_lag.RDS")
-lagpf <- readRDS("results/simulations/mpm/mpm_1_lagfp.RDS")
-
-plots1 <- sum_plot(auto, cov, lag, lagpf)
-
-mat1 <- matrix(nrow = 2, ncol = 2, dimnames = list(c("seedlings", "reproductive"), c("seedlings", "reproductive")))
-mat1[2,1] <- "inv_logit(0 + climate)"
-mat1[2,2] <- "inv_logit(0 + climate)"
-mat1[1,2] <- "exp(1.2 + climate)"
-
-## Autocorrelation and covariance effects
-auto1 <- plots1$auto + plots1$cov + plot_layout(guides = "collect") + plot_annotation(title = "Positive climate effect")
-
-## Lagged effects
-lag1 <- plots1$lag / plots1$lagpf + 
-  plot_layout(guides = "collect") + plot_annotation(title = "Positive climate effect")
+auto <- lapply(list.files("results/simulations/mpm/", pattern = "auto.RDS", full.names = T), readRDS)
+cov <- lapply(list.files("results/simulations/mpm/", pattern = "cov.RDS", full.names = T), readRDS)
+lag <- lapply(list.files("results/simulations/mpm/", pattern = "lag.RDS", full.names = T), readRDS)
+lagpf <- lapply(list.files("results/simulations/mpm/", pattern = "lagfp.RDS", full.names = T), readRDS)
+sig.strength <- regmatches(list.files("results/simulations/mpm/", pattern = "auto.RDS"), regexec("mpm\\_(.+)\\_", list.files("results/simulations/mpm/", pattern = "auto.RDS"))) %>% lapply(., function(x) x[2])
+m <- pmap(list(auto, cov, lag, lagpf, sig.strength), sum_plot)
 
 
-# negative -> s = inv_logit(-climate), g = inv_logit(-climate), f = exp(1.2)
-auto_n <- readRDS("results/simulations/mpm/mpm_-1_auto.RDS")
-cov_n <- readRDS("results/simulations/mpm/mpm_-1_cov.RDS")
-lag_n <- readRDS("results/simulations/mpm/mpm_-1_lag.RDS")
-lagpf_n <- readRDS("results/simulations/mpm/mpm_-1_lagfp.RDS")
 
-mat2 <- matrix(nrow = 2, ncol = 2, dimnames = list(c("seedlings", "reproductive"), c("seedlings", "reproductive")))
-mat2[2,1] <- "inv_logit(0 - climate)"
-mat2[2,2] <- "inv_logit(0 - climate)"
-mat2[1,2] <- "exp(1.2 - climate)"
+## Save histograms of cell values
+pdf(paste("cell_value_plots_sigstrength", i, ".pdf"))
 
-plots2 <- sum_plot(auto_n, cov_n, lag_n, lagpf_n)
+plot_cell(auto, "autocorrelation")
+plot_cell(cov, "covariation")
 
-## Autocorrelation and covariance effects
-auto2 <- plots2$auto + plots2$cov
+plot_cell(lag_s, "survival lagged")
+plot_cell(lag_g, "growth lagged")
+plot_cell(lag_n, "neither vital rate lagged")
 
-## Lagged effects
-lag2 <- plots2$lag / plots2lagpf + 
-  plot_layout(guides = "collect") + plot_annotation(title = "Negative climate effects")
+plot_cell(lag_p, "P lagged")
+plot_cell(lag_f, "F lagged")
+plot_cell(lag_n2, "Neither submatrices lagged")
 
+dev.off()
 
-# half positive effect -> s = inv_logit(-climate * 0.5), g = inv_logit(-climate * 0.5), f = exp(1.2)
-auto_s <- readRDS("results/simulations/mpm/mpm_0.5_auto.RDS")
-cov_s <- readRDS("results/simulations/mpm/mpm_0.5_cov.RDS")
-lag_s <- readRDS("results/simulations/mpm/mpm_0.5_lag.RDS")
-lagpf_s <- readRDS("results/simulations/mpm/mpm_0.5_lagfp.RDS")
-
-
-mat3 <- matrix(nrow = 2, ncol = 2, dimnames = list(c("seedlings", "reproductive"), c("seedlings", "reproductive")))
-mat3[2,1] <- "inv_logit(0 + climate * 0.5)"
-mat3[2,2] <- "inv_logit(0 + climate * 0.5)"
-mat3[1,2] <- "exp(1.2 + climate * 0.5)"
-
-
-plots3<- sum_plot(auto_s, cov_s, lag_s, lagpf_s)
-
-## Autocorrelation and covariance effects
-auto3 <- plots3$auto+ plots3$cov
-
-## Lagged effects
-lag3 <- plots3$lag / plots3$lagpf + 
-  plot_layout(guides = "collect") + plot_annotation(title = "Negative climate effects")
+}
