@@ -11,6 +11,6 @@
 # max running time
 
 # memory per core (hard limit)
-#SBATCH --mem-per-cpu=8G
+#SBATCH --mem-per-cpu=1G
 
 wget --no-host-directories --force-directories --input-file="$HOME"/lagged_buffering/analysis/compadre_studies/CHELSA_files.txt 

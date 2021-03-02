@@ -9,7 +9,7 @@ library(dplyr)
 
 # what do I need from CHELSA?
 chelsa_df <- expand.grid( variable = c('prec', 'tmax', 'tmin'),
-                          year     = c(1990:2010),
+                          year     = c(1960:2010),
                           month    = c(paste0(1:9),
                                        10,11,12),
                           stringsAsFactors = F) %>%
