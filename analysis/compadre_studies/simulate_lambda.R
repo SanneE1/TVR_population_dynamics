@@ -48,7 +48,7 @@ inv_logit <- function(x) {
 # Select mpm's 
 #-----------------------------------------------------------
 
-
+# select only individual matrices
 id2 <- id[which(compadre$metadata$SpeciesAuthor[id] == i & compadre$metadata$MatrixComposite[id] == "Individual")]
 # Retrieve all full matrices
 Amats <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matA)) %>% bind_cols
@@ -56,7 +56,7 @@ Amats <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matA)) 
 Umats <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matU)) %>% bind_cols 
 Fmats <- lapply(as.list(id2), function(x) as.vector(compadre$mat[x][[1]]$matF)) %>% bind_cols
 
-
+# get dimension of the current current study/species_author. All matrices should be of the same size!!
 dim <- unique(compadre$metadata$MatrixDimension[id2])
 
 if(length(dim) != 1) {
@@ -66,7 +66,7 @@ if(length(dim) != 1) {
 print(paste("dim =", dim))
 
 
-## Get mean and standard deviation for each cell in the matrices ()
+## Get mean and standard deviation for each cell in the matrices
 Acell_values <- Amats %>%
   summarise(mean = apply(., 1, mean),
             sd = apply(., 1, sd))%>%
@@ -89,10 +89,10 @@ Fcell_values <- Fmats %>%
 #-----------------------------------------------------------
 
 ## create stochastic climate sensitive mpm's from the data
-## I assume that the sd in the cell variables is the climate effects
+## I assume that when signal_strength is 1 the size of the climate effect is 1 SD. A signal_strength of 0.5 = 0.5 * SD for climate effect and random noise of Norm(0, 0.5*SD)
 
 ### Create environmental sequence ----------------------------
-create_seq <- function(n_it, clim_sd, clim_corr, lag) { 
+create_seq <- function(clim_sd, clim_corr, sig.strength, lag = 1, n_it = 5000) { 
   for(n in c(1:(n_it+lag))){ 
     if(n == 1) {
       seq <- rnorm(1)
@@ -104,13 +104,14 @@ create_seq <- function(n_it, clim_sd, clim_corr, lag) {
   lagged <- c(rep(NA, lag), seq)
   recent <- c(seq, rep(NA, lag))
   df <- data.frame(recent = recent,
-                   lagged = lagged)
+                   lagged = lagged,
+                   sig.strength = sig.strength)
   return(df)
 }
  
 # "Stocastic" mpm -----------------------------------
 
-st.lamb <- function(growth, reproduction){
+st.lamb <- function(growth, reproduction, signal_strength){
   
   n_it = length(growth)
   
@@ -122,30 +123,35 @@ st.lamb <- function(growth, reproduction){
   env <- split(env, seq(nrow(env)))
   
   ### Get all mpm's
-  mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction))
+  mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction, signal_strength))
   
   lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim
   
   return(data.frame(lambda = lambda,
-                    clim_sd = sd(growth, na.rm = T),
-                    clim_auto = round(acf(growth, plot = F, na.action = na.pass)$acf[2], digits = 3)))
+                    actual_sd = sd(growth, na.rm = T),
+                    actual_auto = round(acf(growth, plot = F, na.action = na.pass)$acf[2], digits = 3),
+                    signal_strength = signal_strength))
 }
 
-clim_sd <- rep(seq(from = 0.01, to = 2, length.out = 10), 90)
-clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
+clim_sd <- seq(from = 0.01, to = 2, length.out = 10)
+clim_corr <- c(-0.9,0,0.9)
+sig.strength <- c(1, 0.5, 0.1)
 
-lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = clim_sd[x], clim_corr = clim_corr[x], lag = 1) %>% filter(!is.na(.)))
+df <- expand.grid(clim_sd, clim_corr, sig.strength) 
+df <- do.call("rbind", replicate(30, df, simplify = FALSE)) %>% `names<-`(., c("clim_sd", "clim_auto", "sig.strength"))
+
+lag_clim <- lapply(as.list(c(1:nrow(df))), function(x) create_seq(clim_sd = df$clim_sd[x], clim_corr = df$clim_auto[x], sig.strength = df$sig.strength[x]) %>% filter(complete.cases(.)))
 
 
 # species specific mpm
-  mpm <- function(U_clim, F_clim, signal_strength_U = 1, signal_strength_F = 1) {
+  mpm <- function(U_clim, F_clim, signal_strength) {
     
-    Umat <- Ucell_values$mean + Ucell_values$sd * (U_clim * signal_strength_U) + 
+    Umat <- Ucell_values$mean + Ucell_values$sd * (U_clim * signal_strength) + 
       rnorm(n = length(Ucell_values$sd),
-        mean = 0, sd = (Ucell_values$sd * (1-signal_strength_U))) 
-    Fmat <- Fcell_values$mean + Fcell_values$sd * (F_clim * signal_strength_F) + 
+        mean = 0, sd = (Ucell_values$sd * (1-signal_strength))) 
+    Fmat <- Fcell_values$mean + Fcell_values$sd * (F_clim * signal_strength) + 
       rnorm(n = length(Fcell_values$sd),
-            mean = 0, sd = (Fcell_values$sd * (1-signal_strength_F))) 
+            mean = 0, sd = (Fcell_values$sd * (1-signal_strength))) 
     
     Umat <- case_when(Umat < 0 ~ 0,
                       Umat > 1 ~ 1,
@@ -164,25 +170,34 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(10000, clim_sd = cl
   
   lag_u <- pblapply(lag_clim, 
                     function(x) st.lamb(growth = x$lagged,
-                                        reproduction = x$recent)
+                                        reproduction = x$recent,
+                                        sig.strength = unique(x$sig.strength))
   ) %>% bind_rows
   
   lag_f <- pblapply(lag_clim, 
                     function(x) st.lamb(growth = x$recent,
-                                        reproduction = x$lagged)
+                                        reproduction = x$lagged,
+                                        sig.strength = unique(x$sig.strength))
   ) %>% bind_rows
   
   lag_n <- pblapply(lag_clim, 
                     function(x) st.lamb(growth = x$recent,
-                                        reproduction = x$recent)
+                                        reproduction = x$recent,
+                                        sig.strength = unique(x$sig.strength))
   ) %>% bind_rows
   
   lag_uf <- list("Umatrix" = data.frame(lag_u,
-                                        type = "Umatrix"),
+                                        type = "Umatrix",
+                                        clim_sd = clim_sd,
+                                        clim_auto = clim_corr),
                  "Fmatrix" = data.frame(lag_f,
-                                        type = "Fmatrix"),
+                                        type = "Fmatrix",
+                                        clim_sd = clim_sd,
+                                        clim_auto = clim_corr),
                  "None" = data.frame(lag_n,
-                                     type = "None"))
+                                     type = "None",
+                                     clim_sd = clim_sd,
+                                     clim_auto = clim_corr))
   
 output_dir <- args[2]
 
