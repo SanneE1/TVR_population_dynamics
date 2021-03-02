@@ -42,9 +42,9 @@ sum_plot <- function(auto, cov, lag, lag_pf, sig.strength, save = T){
   plot_lag <-  (lag_p / lagpf_p) + plot_layout(guides = "collect") + plot_annotation(title = paste("Climate signal strenth =", sig.strength))
   
   if(save) {
-  ggsave(filename = file.path("results/01_Simulations_mpm_same_directions/lambdas_plots/", paste0("auto_cov_plot_signal_strength_", sig.strength, ".png")), 
+  ggsave(filename = file.path("results/01_Simulations_mpm_same_directions/lambda_plots/", paste0("auto_cov_plot_signal_strength_", sig.strength, ".png")), 
          plot_AC)
-    ggsave(filename = file.path("results/01_Simulations_mpm_same_directions/lambdas_plots/", paste0("lag_plot_signal_strength_", sig.strength, ".png")), 
+    ggsave(filename = file.path("results/01_Simulations_mpm_same_directions/lambda_plots/", paste0("lag_plot_signal_strength_", sig.strength, ".png")), 
            plot_lag)
   }
   
