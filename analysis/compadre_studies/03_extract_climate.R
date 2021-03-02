@@ -45,6 +45,8 @@ site_coord <-  matrix(c(coord_df$Longitude,
 
 # 2. List downloaded CHELSA files using the text file used for downloading  --------------------------
 files <- list.files(path = download.location, pattern = ".tif$", recursive = T, full.names = T)
+print("number of files:")
+length(files)
 
 # 3. Extract CHELSA DATA ------------------------------------------------------------------------
 
