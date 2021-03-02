@@ -10,9 +10,10 @@ multiple_Ind <- compadre$metadata %>%
   filter(MatrixComposite == "Individual" & 
            MatrixSplit == "Divided" &
            MatrixFec == "Yes") %>%
-  select(SpeciesAuthor, MatrixPopulation, OrganismType, Lat, Lon) %>%
+  select(SpeciesAuthor, MatrixPopulation, StudyStart, OrganismType, Lat, Lon) %>%
   group_by(SpeciesAuthor, MatrixPopulation) %>%
   summarise(OrganismType = OrganismType,
+            Start = StudyStart,
             Lat = Lat,
             Lon = Lon,
             n = n())  %>%
@@ -30,9 +31,10 @@ annual <- compadre$metadata %>%
          MatrixSplit == "Divided",
          MatrixFec == "Yes",
          MatrixComposite == "Individual") %>%
-  select(SpeciesAuthor, MatrixPopulation, OrganismType, Lat, Lon, MatrixComposite) %>%
+  select(SpeciesAuthor, MatrixPopulation, StudyStart, OrganismType, Lat, Lon, MatrixComposite) %>%
   group_by(SpeciesAuthor) %>%
   summarise(OrganismType = OrganismType,
+            Start = StudyStart,
             Lat = Lat,
             Lon = Lon,
             n = n())  %>%
