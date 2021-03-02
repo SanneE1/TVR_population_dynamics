@@ -9,16 +9,22 @@
 # MAKE SURE TO CHECK THE LOG FILES AT THE END. SCRIPT WILL PRINT FILES WHERE IT IS UNABLE TO EXTRACT DATA 
 # Usually this is due to a corrupted download
 
-library(dplyr)
-library(tidyr)
-library(raster)
-library(RCurl)
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(raster))
+suppressPackageStartupMessages(library(RCurl))
 
 # arguments from command line
 args     <- commandArgs(trailingOnly = TRUE)
 download.location <- args[1]
 lat.lon.file <- args[2]
 output_dir <- args[3]
+
+print(paste("location of downloads:", download.location))
+print(paste("location of lat/lon file:", lat.lon.file))
+print(paste("output_directory:", output_dir))
+
+print(paste("work directory:", getwd()))
 
 # 1. set up lat/lon data ------------------------------------------------------
 
