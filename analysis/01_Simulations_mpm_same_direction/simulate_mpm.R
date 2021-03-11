@@ -15,12 +15,12 @@ inv_logit <- function(x) {
 }
 
 ### Create environmental sequence ----------------------------
-create_seq <- function(n_it, clim_sd, clim_corr, lag) { 
+create_seq <- function(n_it, clim_sd, clim_auto, lag) { 
   for(n in c(1:(n_it+lag))){ 
     if(n == 1) {
       seq <- rnorm(1)
     } else {
-      seq[n] <- clim_corr * seq[n-1] + rnorm(1)
+      seq[n] <- clim_auto * seq[n-1] + rnorm(1)
     }
   }
   seq <- scale(seq) * clim_sd
@@ -50,7 +50,7 @@ mpm <- function(survival, growth, reproduction, clim_sd, sig.strength = 1) {
 
 # "Stocastic" mpm -----------------------------------
 
-st.lamb <- function(env_surv, env_growth, env_reproduction, clim_sd, sig.strength) {
+st.lamb <- function(env_surv, env_growth, env_reproduction, clim_sd, clim_auto, sig.strength) {
   
   n_it = length(env_surv)
   
@@ -65,7 +65,9 @@ st.lamb <- function(env_surv, env_growth, env_reproduction, clim_sd, sig.strengt
   mats <- lapply(env, function(x) mpm(x[1], x[2], x[3], clim_sd, sig.strength))
   
   
-  df = stoch.growth.rate(mats, maxt = 1000)$sim
+  df <- data.frame(lambda = stoch.growth.rate(mats, maxt = 1000)$sim,
+                  clim_sd = clim_sd,
+                  clim_auto = clim_auto)
   
   return(list(df = df,
               mats = data.frame(t(lapply(mats, as.vector) %>% bind_rows)) %>% 
@@ -87,35 +89,35 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
   
   ### autocorrelation in growth
   
-  clim_sd <- rep(seq(from = 0, to = 2, length.out = 10), 90)
-  clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
+  clim_sd <- rep(seq(from = 0.01, to = 2, length.out = 10), 90)
+  clim_auto <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
   
   ## export objects to workers
-  clusterExport(cl, c("i", "create_seq", "inv_logit", "mpm", "st.lamb", "clim_corr", "clim_sd"))
-  
+  clusterExport(cl, c("i", "create_seq", "inv_logit", "mpm", "st.lamb", "clim_auto", "clim_sd"))
+
 
   auto <- pblapply(cl = cl,
-                   as.list(c(1:225)),
+                   as.list(c(1:900)),
                    function(x) try(st.lamb(env_surv = rep(0, 50000),
-                                       env_growth = create_seq(n_it = 50000, clim_sd[x], clim_corr[x], 0)$recent,
+                                       env_growth = create_seq(n_it = 50000, clim_sd[x], clim_auto[x], 0)$recent,
                                        env_reproduction = rep(0,50000),
                                        clim_sd = clim_sd[x],
+                                       clim_auto = clim_auto[x],
                                        sig.strength = i))
   )
-  
-  auto_df <- lapply(auto, function(x) x$df) %>% unlist
-  
-  saveRDS(auto_df, file.path(output_dir, paste("mpm_", i, "_auto.RDS", sep = "")))
+
+
+  saveRDS(auto, file.path(output_dir, paste("mpm_", i, "_auto.RDS", sep = "")))
 
 
 
-  ### Covariance all vr
+  ### Covariance all P vr
   clim <- lapply(as.list(c(1:900)), function(x)
     rnorm_multi(n = 5000,
                 vars = 2,
                 mu = c(0,0),
                 sd = clim_sd[x],
-                r = clim_corr[x],
+                r = clim_auto[x],
                 varnames = c("surv", "growth")) )
 
   clusterExport(cl, c("clim"))
@@ -126,24 +128,26 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                                       env_growth = x$growth,
                                       env_reproduction = rep(0,5000),
                                       clim_sd = sd(x$surv),
+                                      clim_auto = cor(x$surv, x$growth),
                                       sig.strength = i)
   )
-  cov_df <- lapply(cov, function(x) x$df) %>% unlist
+
+  saveRDS(cov, file.path(output_dir, paste("mpm_", i, "_cov.RDS", sep = "")))
   
-  saveRDS(cov_df, paste("/mpm_", i, "_cov.RDS", sep = ""))
 
   #### Lagged effect within P "functions"
-  
-  lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(5000, clim_sd = clim_sd[x], clim_corr = clim_corr[x], lag = 1))
-  
+
+  lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(5000, clim_sd = clim_sd[x], clim_auto = clim_auto[x], lag = 1))
+
   clusterExport(cl, c("lag_clim"))
-  
+
   lag_g <- pblapply(cl = cl,
                     lag_clim,
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$lagged,
                                         env_reproduction = rep(0,length(x$recent)),
                                         clim_sd = sd(x$recent, na.rm = T),
+                                        clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                         sig.strength = i)
   )
 
@@ -153,6 +157,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                                         env_growth = x$recent,
                                         env_reproduction = rep(0,length(x$recent)),
                                         clim_sd = sd(x$recent, na.rm = T),
+                                        clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                         sig.strength = i)
   )
 
@@ -162,52 +167,50 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                                         env_growth = x$recent,
                                         env_reproduction = rep(0,length(x$recent)),
                                         clim_sd = sd(x$recent, na.rm = T),
+                                        clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                         sig.strength = i)
   )
-  lagg_df <- lapply(lag_g, function(x) x$df) %>% unlist
-  lags_df <- lapply(lag_s, function(x) x$df) %>% unlist
-  lagn_df <- lapply(lag_n, function(x) x$df) %>% unlist
-  
-  lag <- list("growth" = lagg_df, "survival" = lags_df, "none" = lagn_df)
+
+  lag <- list("growth" = lag_g, "survival" = lag_s, "none" = lag_n)
 
   saveRDS(lag, file.path(output_dir, paste("mpm_", i, "_lag.RDS", sep = "")))
 
-  #### Lagged effect
-  
-  lag_p <- pblapply(cl = cl, 
-                    lag_clim, 
+  #### Lagged effect between components (P&F)
+
+  lag_p <- pblapply(cl = cl,
+                    lag_clim,
                     function(x) st.lamb(env_surv = x$lagged,
                                         env_growth = x$lagged,
                                         env_reproduction = x$recent,
                                         clim_sd = sd(x$recent, na.rm = T),
+                                        clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                         sig.strength = i)
   )
-  
-  lag_f <- pblapply(cl = cl, 
-                    lag_clim, 
+
+  lag_f <- pblapply(cl = cl,
+                    lag_clim,
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$recent,
                                         env_reproduction = x$lagged,
                                         clim_sd = sd(x$recent, na.rm = T),
+                                        clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                         sig.strength = i)
   )
-  
-  lag_n2 <- pblapply(cl = cl, 
-                    lag_clim, 
+
+  lag_n2 <- pblapply(cl = cl,
+                    lag_clim,
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$recent,
                                         env_reproduction = x$recent,
                                         clim_sd = sd(x$recent, na.rm = T),
+                                        clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                         sig.strength = i)
   )
-  lagp_df <- lapply(lag_p, function(x) x$df) %>% unlist
-  lagf_df <- lapply(lag_f, function(x) x$df) %>% unlist
-  lagn2_df <- lapply(lag_n2, function(x) x$df) %>% unlist
-  
-  lag_fp <- list("Pkernel" = lagp_df, "Fkernel" = lagf_df, "none" = lagn2_df)
-  
+
+  lag_fp <- list("Pkernel" = lag_p, "Fkernel" = lag_f, "none" = lag_n2)
+
   saveRDS(lag_fp, file.path(output_dir, paste("mpm_", i, "_lagfp.RDS", sep = "")))
-  
+
   stopCluster(cl)
 
 }
