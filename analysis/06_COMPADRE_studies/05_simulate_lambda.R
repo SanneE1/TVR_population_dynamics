@@ -19,7 +19,7 @@ if(length(args) == 0) {
 }
 
 # load most current compadre database
-load('/data/lagged/COMPADRE_v.X.X.X.4.RData')
+load('/data/lagged/COMPADRE_v.6.21.1.0.RData')
 
 ## Selection ids of Species_author
 species <- read.csv(args[1])

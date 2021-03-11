@@ -2,7 +2,7 @@ library(tidyverse)
 library(popbio)
 library(Rage)
 
-load("data/COMPADRE_v.X.X.X.4.RData")
+load("data/COMPADRE_v.6.21.1.0.RData")
 
 
 # With these criteria there are no annual species
