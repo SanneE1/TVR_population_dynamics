@@ -25,7 +25,7 @@ module load foss/2019b R/4.0.0-2
 Cdownloads=$1
 LatLonfile=$2
 
-Rscript "$HOME"/lagged_buffering/analysis/compadre_studies/03_extract_climate.R \
+Rscript "$HOME"/lagged_buffering/analysis/06_COMPADRE_studies/03_extract_climate.R \
 "$Cdownloads" \
 "$LatLonfile" \
 "$OUTPUT_PATH"

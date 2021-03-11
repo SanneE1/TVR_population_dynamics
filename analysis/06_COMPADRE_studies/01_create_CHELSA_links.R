@@ -33,5 +33,5 @@ produce_file_name <- function(ii){
 file_names <- sapply( c(1:nrow(chelsa_df)), produce_file_name)
 file_links <- paste0( read_dir, file_names)
 
-write.table(file_links, "analysis/compadre_studies/CHELSA_files.txt", row.names = F, col.names = F, quote = F)
+write.table(file_links, "analysis/06_COMPADRE_studies/CHELSA_files.txt", row.names = F, col.names = F, quote = F)
 
