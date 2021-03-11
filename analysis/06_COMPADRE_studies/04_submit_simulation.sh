@@ -24,6 +24,6 @@ mkdir -p "$OUTPUT_PATH"
 module load foss/2019b R/4.0.0-2
 
 
-Rscript "$HOME"/lagged_buffering/analysis/compadre_studies/simulate_lambda.R \
+Rscript "$HOME"/lagged_buffering/analysis/06_COMPADRE_studies/04_simulate_lambda.R \
 "/data/lagged/species_authors.csv" \
 "$OUTPUT_PATH"
