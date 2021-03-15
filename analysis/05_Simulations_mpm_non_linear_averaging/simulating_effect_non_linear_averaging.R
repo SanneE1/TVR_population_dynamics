@@ -31,10 +31,10 @@ mpm <- function(survival, growth, reproduction, clim_sd, sig.strength = 1) {
   mpm[2,1] <- inv_logit(growth * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) ) ### inv_logit(0) = 0.5 (intercept)
   
   # survival/stasis
-  mpm[2,2] <- inv_logit(1 + survival + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
+  mpm[2,2] <- inv_logit(1 + survival * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
   
   # reproduction 
-  mpm[1,2] <- exp(1.2 + reproduction + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
+  mpm[1,2] <- exp(1.2 + reproduction * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
   
   return(mpm)  
 }
@@ -56,7 +56,7 @@ stopCluster(cl)
 # Low survival rate
 #-----------------------------------
 
-### Create mpm function with lower end survival probablility (~0.73)
+### Create mpm function with lower end survival probablility (~0.23)
 mpm <- function(survival, growth, reproduction, clim_sd, sig.strength = 1) {
   ## Basic mpm
   mpm <- matrix(0, nrow = 2, ncol = 2)
@@ -65,10 +65,10 @@ mpm <- function(survival, growth, reproduction, clim_sd, sig.strength = 1) {
   mpm[2,1] <- inv_logit(growth * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) ) ### inv_logit(0) = 0.5 (intercept)
   
   # survival/stasis
-  mpm[2,2] <- inv_logit(-1 + survival + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
+  mpm[2,2] <- inv_logit(-1 + survival * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
   
   # reproduction 
-  mpm[1,2] <- exp(1.2 + reproduction + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
+  mpm[1,2] <- exp(1.2 + reproduction  * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
   
   return(mpm)  
 }
