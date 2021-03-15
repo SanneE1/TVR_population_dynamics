@@ -130,9 +130,7 @@ st.lamb <- function(growth, reproduction, clim_sd, clim_auto, sig.strength){
                    clim_sd = clim_sd,
                    clim_auto = clim_auto)
   
-  return(list(df = df,
-              mats = data.frame(t(lapply(mats, as.vector) %>% bind_rows)) %>% 
-                `colnames<-`(c("1,1", "2,1", "1,2", "2,2"))))
+  return(df)
 }
 
 clim_sd <- seq(from = 0.01, to = 2, length.out = 10)
@@ -209,5 +207,37 @@ if(length(n_pop == 1)) {
 }
 
 saveRDS(lag_uf, file.path(output_dir, output_file))
+
+
+## Run mpm sequences again
+# Randomly select a sequence with a low and high sd
+low_sd <- sample(which(round(df$clim_sd, digits = 3) == 0.231), 1)
+high_sd <- sample(which(round(df$clim_sd, digits = 3) == 2), 1)
+
+cells <- list()
+
+for(n in c(low_sd, high_sd)) {
+  
+  growth <- lag_clim[[n]]$recent
+  reproduction <- lag_clim[[n]]$lagged
+  
+n_it = length(growth)
+env <- data.frame(growth = growth,
+                  reproduction = reproduction)
+env <- env[complete.cases(env), ]
+env <- split(env, seq(nrow(env)))
+### Get all mpm's
+mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction, sig.strength = sig.strength))
+
+mats = data.frame(t(lapply(mats, as.vector) %>% bind_rows))
+
+mats$sd <- df$clim_sd[n]
+
+cells <- append(cells,
+                mats)
+
+
+}
+saveRDS(cells, file.path(output_dir, "cell_values_HnL.RDS"))
 
 Sys.time() - start
