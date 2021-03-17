@@ -1,7 +1,6 @@
 ### simulate the effect of recent and lagged climate drivers when signal strength of different VR depends on the 
 ### sensitivity of the VR
 
-output_dir <- "results/04_simulations_mpm_different_signal_strengths/"
 ### Create line sourcing to 
 source_lines <- function(file, lines){
   source(textConnection(readLines(file)[lines]))
@@ -9,6 +8,9 @@ source_lines <- function(file, lines){
 
 ## source necessary function from main file
 source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(1:33, 51:76))
+
+## overwrite output directory to right folder
+output_dir <- "results/04_simulations_mpm_different_signal_strengths/"
 
 ### Create MPM function that deals with different signal strenghts
 mpm <- function(survival, growth, reproduction, clim_sd, sig.strength = 1) {
