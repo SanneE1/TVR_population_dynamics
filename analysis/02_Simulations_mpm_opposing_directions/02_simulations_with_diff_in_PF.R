@@ -22,20 +22,20 @@ source_lines <- function(file, lines){
 ### Get necesary functions. Source lines from 01 folder
 source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(10:33, 51:76))
 
-### Create mpm function with +s and -g
+### Create mpm function with +P (s&g) and - F
 
 mpm <- function(survival, growth, reproduction, clim_sd, sig.strength = 1) {
   ## Basic mpm
   mpm <- matrix(0, nrow = 2, ncol = 2)
   
   #growth                     Get the error term sd to reflect the sd of the environment sequence
-  mpm[2,1] <- inv_logit(growth * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) ) ### inv_logit(0) = 0.5 (intercept)
+  mpm[2,1] <- inv_logit((growth * sig.strength) + ((1-sig.strength) * rnorm(1, 0, clim_sd)) ) ### inv_logit(0) = 0.5 (intercept)
   
   # survival/stasis
-  mpm[2,2] <- inv_logit(survival + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
+  mpm[2,2] <- inv_logit((survival * sig.strength) + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
   
   # reproduction 
-  mpm[1,2] <- exp(1.2 + reproduction - ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
+  mpm[1,2] <- exp(1.2 - reproduction + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
   
   return(mpm)  
 }
