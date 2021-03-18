@@ -12,7 +12,7 @@ source_lines <- function(file, lines){
 }
 
 ### Get necesary functions. Source lines from 01 folder
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(1:33, 51:76))
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(1:33, 67:92))
 
 ### Change output directory to current folder
 output_dir <- "results/05_Simulations_mpm_non_linear_averaging/"
@@ -23,28 +23,45 @@ output_dir <- "results/05_Simulations_mpm_non_linear_averaging/"
 #-----------------------------------
 
 ### Create mpm function with higher end survival probablility (~0.27)
-mpm <- function(survival, growth, reproduction, clim_sd, sig.strength = 1) {
+mpm <- function(survival, growth, reproduction, clim_sd, sig.strength) {
   ## Basic mpm
   mpm <- matrix(0, nrow = 2, ncol = 2)
   
-  #growth                     Get the error term sd to reflect the sd of the environment sequence
-  mpm[2,1] <- inv_logit(growth * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) ) ### inv_logit(0) = 0.5 (intercept)
-  
-  # survival/stasis
-  mpm[2,2] <- inv_logit(1 + survival * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
-  
+  #growth                    
+  if(is.na(growth)) {
+    mpm[2,1] <- inv_logit(0) ### inv_logit(0) = 0.5 (intercept) 
+  } else {
+    mpm[2,1] <- inv_logit((growth * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                            ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    ) 
+  }
+  # survival
+  if(is.na(survival)) {
+    mpm[2,2] <- inv_logit(0)
+  } else {
+    mpm[2,2] <- inv_logit((1 + 
+                             survival * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                            ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    )
+  }
   # reproduction 
-  mpm[1,2] <- exp(1.2 + reproduction * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
-  
+  if(is.na(reproduction)) {
+    mpm[1,2] <- exp(1.2)
+  } else {
+    mpm[1,2] <- exp(1.2 + 
+                      (reproduction * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                      ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    )
+  }
   return(mpm)  
 }
 
 
 # Set up parallel
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(81:97))
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(98:113))
 
-# Run simulation within P Kernel and between P&F Kernels
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(138:175, 178:211))
+# Run simulation within U matrix and between U&F matrices
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(154:191, 194:227))
 
 saveRDS(lag, file.path(output_dir, "high_survival_lag.RDS"))
 saveRDS(lag_fp, file.path(output_dir, "high_survival_lagfp.RDS"))
@@ -57,27 +74,44 @@ stopCluster(cl)
 #-----------------------------------
 
 ### Create mpm function with lower end survival probablility (~0.23)
-mpm <- function(survival, growth, reproduction, clim_sd, sig.strength = 1) {
+mpm <- function(survival, growth, reproduction, clim_sd, sig.strength) {
   ## Basic mpm
   mpm <- matrix(0, nrow = 2, ncol = 2)
   
-  #growth                     Get the error term sd to reflect the sd of the environment sequence
-  mpm[2,1] <- inv_logit(growth * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) ) ### inv_logit(0) = 0.5 (intercept)
-  
-  # survival/stasis
-  mpm[2,2] <- inv_logit(-1 + survival * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
-  
+  #growth                    
+  if(is.na(growth)) {
+    mpm[2,1] <- inv_logit(0) ### inv_logit(0) = 0.5 (intercept) 
+  } else {
+    mpm[2,1] <- inv_logit((growth * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                            ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    ) 
+  }
+  # survival
+  if(is.na(survival)) {
+    mpm[2,2] <- inv_logit(0)
+  } else {
+    mpm[2,2] <- inv_logit((-1 +
+                             survival * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                            ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    )
+  }
   # reproduction 
-  mpm[1,2] <- exp(1.2 + reproduction  * sig.strength + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
-  
+  if(is.na(reproduction)) {
+    mpm[1,2] <- exp(1.2)
+  } else {
+    mpm[1,2] <- exp(1.2 + 
+                      (reproduction * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                      ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    )
+  }
   return(mpm)  
 }
 
 # Set up parallel
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(81:97))
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(98:113))
 
-# Run simulation within P Kernel and between P&F Kernels
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(138:175, 178:211))
+# Run simulation within U matrix and between U&F matrices
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(154:191, 194:227))
 
 saveRDS(lag, file.path(output_dir, "low_survival_lag.RDS"))
 saveRDS(lag_fp, file.path(output_dir, "low_survival_lagfp.RDS"))
@@ -98,7 +132,7 @@ medium_lag <- lapply(readRDS(file.path("results/01_Simulations_mpm_same_directio
   labs(colour = "Lag type", title = "survival mean set to 0.5") +
   facet_grid(cols = vars(auto_cat))  
 
-medium_fp <- lapply(readRDS(file.path("results/01_Simulations_mpm_same_directions/", "rds", "mpm_0.5_lagfp.RDS")),
+medium_fp <- lapply(readRDS(file.path("results/01_Simulations_mpm_same_directions/", "rds", paste0("mpm_", i, "_lagfp.RDS"))),
                     function(x) lapply(x, function(y) y$df) %>% bind_rows %>% 
                       mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))) %>%
   bind_rows(., .id = "type") %>%

@@ -31,20 +31,36 @@ create_seq <- function(n_it, clim_sd, clim_auto, lag) {
   return(df)
 }
 
-
-mpm <- function(survival, growth, reproduction, clim_sd, sig.strength = 1) {
+## Alright kids, this is where it gets complicated: partitioning on variance scale and distributions on sd scale 
+mpm <- function(survival, growth, reproduction, clim_sd, sig.strength) {
   ## Basic mpm
   mpm <- matrix(0, nrow = 2, ncol = 2)
   
-  #growth                     Get the error term sd to reflect the sd of the environment sequence
-  mpm[2,1] <- inv_logit((growth * sig.strength) + ((1-sig.strength) * rnorm(1, 0, clim_sd)) ) ### inv_logit(0) = 0.5 (intercept)
-  
+  #growth                    
+  if(is.na(growth)) {
+    mpm[2,1] <- inv_logit(0) ### inv_logit(0) = 0.5 (intercept) 
+  } else {
+    mpm[2,1] <- inv_logit((growth * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                            ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    ) 
+  }
   # survival
-  mpm[2,2] <- inv_logit((survival * sig.strength) + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
-  
+  if(is.na(survival)) {
+    mpm[2,2] <- inv_logit(0)
+  } else {
+    mpm[2,2] <- inv_logit((survival * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                            ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    )
+  }
   # reproduction 
-  mpm[1,2] <- exp(1.2 + (reproduction * sig.strength) + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
-  
+  if(is.na(reproduction)) {
+    mpm[1,2] <- exp(1.2)
+  } else {
+    mpm[1,2] <- exp(1.2 + 
+                      (reproduction * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                      ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    )
+  }
   return(mpm)  
 }
 
@@ -57,7 +73,7 @@ st.lamb <- function(env_surv, env_growth, env_reproduction, clim_sd, clim_auto, 
   env <- data.frame(survival = env_surv,
                     growth = env_growth,
                     reproduction = env_reproduction)
-  env <- env[complete.cases(env), ]
+  
   
   env <- as.list(as.data.frame(t(env)))
   
@@ -65,7 +81,7 @@ st.lamb <- function(env_surv, env_growth, env_reproduction, clim_sd, clim_auto, 
   mats <- lapply(env, function(x) mpm(x[1], x[2], x[3], clim_sd, sig.strength))
   
   
-  df <- data.frame(lambda = stoch.growth.rate(mats, maxt = 1000)$sim,
+  df <- data.frame(lambda = stoch.growth.rate(mats, maxt = n_it)$sim,
                   clim_sd = clim_sd,
                   clim_auto = clim_auto)
   
@@ -98,9 +114,9 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
 
   auto <- pblapply(cl = cl,
                    as.list(c(1:900)),
-                   function(x) try(st.lamb(env_surv = rep(0, 50000),
-                                       env_growth = create_seq(n_it = 50000, clim_sd[x], clim_auto[x], 0)$recent,
-                                       env_reproduction = rep(0,50000),
+                   function(x) try(st.lamb(env_surv = rep(NA, 5000),
+                                       env_growth = create_seq(n_it = 5000, clim_sd[x], clim_auto[x], 0)$recent,
+                                       env_reproduction = rep(NA,5000),
                                        clim_sd = clim_sd[x],
                                        clim_auto = clim_auto[x],
                                        sig.strength = i))
@@ -111,7 +127,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
 
 
 
-  ### Covariance all P vr
+  ### Covariance all U vr
   clim <- lapply(as.list(c(1:900)), function(x)
     rnorm_multi(n = 5000,
                 vars = 2,
@@ -126,7 +142,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                   clim,
                   function(x) st.lamb(env_surv = x$surv,
                                       env_growth = x$growth,
-                                      env_reproduction = rep(0,5000),
+                                      env_reproduction = rep(NA,5000),
                                       clim_sd = sd(x$surv),
                                       clim_auto = cor(x$surv, x$growth),
                                       sig.strength = i)
@@ -135,7 +151,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
   saveRDS(cov, file.path(output_dir, paste("mpm_", i, "_cov.RDS", sep = "")))
   
 
-  #### Lagged effect within P "functions"
+  #### Lagged effect within U matrix
 
   lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(5000, clim_sd = clim_sd[x], clim_auto = clim_auto[x], lag = 1))
 
@@ -145,7 +161,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                     lag_clim,
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$lagged,
-                                        env_reproduction = rep(0,length(x$recent)),
+                                        env_reproduction = rep(NA,length(x$recent)),
                                         clim_sd = sd(x$recent, na.rm = T),
                                         clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                         sig.strength = i)
@@ -155,7 +171,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                     lag_clim,
                     function(x) st.lamb(env_surv = x$lagged,
                                         env_growth = x$recent,
-                                        env_reproduction = rep(0,length(x$recent)),
+                                        env_reproduction = rep(NA,length(x$recent)),
                                         clim_sd = sd(x$recent, na.rm = T),
                                         clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                         sig.strength = i)
@@ -165,7 +181,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                     lag_clim,
                     function(x) st.lamb(env_surv = x$recent,
                                         env_growth = x$recent,
-                                        env_reproduction = rep(0,length(x$recent)),
+                                        env_reproduction = rep(NA,length(x$recent)),
                                         clim_sd = sd(x$recent, na.rm = T),
                                         clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                         sig.strength = i)
@@ -175,7 +191,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
 
   saveRDS(lag, file.path(output_dir, paste("mpm_", i, "_lag.RDS", sep = "")))
 
-  #### Lagged effect between components (P&F)
+  #### Lagged effect between U & F matrices
 
   lag_p <- pblapply(cl = cl,
                     lag_clim,
@@ -207,7 +223,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                                         sig.strength = i)
   )
 
-  lag_fp <- list("Pkernel" = lag_p, "Fkernel" = lag_f, "none" = lag_n2)
+  lag_fp <- list("Umatrix" = lag_p, "Fmatrix" = lag_f, "none" = lag_n2)
 
   saveRDS(lag_fp, file.path(output_dir, paste("mpm_", i, "_lagfp.RDS", sep = "")))
 

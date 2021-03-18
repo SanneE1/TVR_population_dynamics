@@ -20,37 +20,52 @@ source_lines <- function(file, lines){
 }
 
 ### Get necesary functions. Source lines from 01 folder
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(10:33, 51:76))
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(10:33, 67:92))
 
 ### Create mpm function with +P (s&g) and - F
 
-mpm <- function(survival, growth, reproduction, clim_sd, sig.strength = 1) {
+mpm <- function(survival, growth, reproduction, clim_sd, sig.strength) {
   ## Basic mpm
   mpm <- matrix(0, nrow = 2, ncol = 2)
   
-  #growth                     Get the error term sd to reflect the sd of the environment sequence
-  mpm[2,1] <- inv_logit((growth * sig.strength) + ((1-sig.strength) * rnorm(1, 0, clim_sd)) ) ### inv_logit(0) = 0.5 (intercept)
-  
-  # survival/stasis
-  mpm[2,2] <- inv_logit((survival * sig.strength) + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
-  
+  #growth                    
+  if(is.na(growth)) {
+    mpm[2,1] <- inv_logit(0)  
+  } else {
+    mpm[2,1] <- inv_logit((growth * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                            ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    ) 
+  }
+  # survival
+  if(is.na(survival)) {
+    mpm[2,2] <- inv_logit(0)
+  } else {
+    mpm[2,2] <- inv_logit((survival * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                            ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    )
+  }
   # reproduction 
-  mpm[1,2] <- exp(1.2 - reproduction + ((1-sig.strength) * rnorm(1, 0, clim_sd)) )
-  
+  if(is.na(reproduction)) {
+    mpm[1,2] <- exp(1.2)
+  } else {
+    mpm[1,2] <- exp(1.2 - 
+                      (reproduction * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
+                      ((sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    )
+  }
   return(mpm)  
 }
-
 
 ## Run simulations ----------------------------------------
 
 # Set up parallel
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(81:97))
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(98:113))
 
 # Create climate sequences
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(139:141))
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(155:159))
 
-# Run simulations for P and F component
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(178:215))
+# Run simulations for U and F matrix
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(194:231))
 
 
 # Plot results
@@ -61,7 +76,8 @@ lag_pf <- lapply(lag_fp, function(x)
 
 
 lagpf_p <- ggplot(lag_pf) + geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
-  labs(colour = "Lag type", title = "Lagged climate in P or F", subtitle = "survival climate effect = pos, growth climate effect= neg") +
+  labs(colour = "Lag type", title = "Lagged climate in U or F matrix", 
+       subtitle = "U climate effect = pos \nF climate effect = neg") +
   facet_grid(cols = vars(auto_cat)) + scale_colour_manual(values = c("#00AFBB", "#E7B800", "#FC4E07"))
 
 
@@ -82,8 +98,8 @@ lagpf_pos <- lapply(lagpf_pos[[which(sig.strength == i)]], function(x) lapply(x,
   bind_rows(., .id = "type") %>%
   ggplot(.) +
   geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
-  labs(colour = "Lag type", title = "Lagged climate in growth or survival",
-       subtitle = "survival climate effect = pos \ngrowth climate effect= pos") +
+  labs(colour = "Lag type", title = "Lagged climate in U or F matrix",
+       subtitle = "U climate effect = pos \nF climate effect= pos") +
   facet_grid(cols = vars(auto_cat)) + scale_colour_manual(values = c("#00AFBB", "#E7B800", "#FC4E07"))
 
 

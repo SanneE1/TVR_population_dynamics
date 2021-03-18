@@ -7,25 +7,41 @@ source_lines <- function(file, lines){
 }
 
 ## source necessary function from main file
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(1:33, 51:76))
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(1:33, 67:92))
 
 ## overwrite output directory to right folder
 output_dir <- "results/04_simulations_mpm_different_signal_strengths/"
 
-### Create MPM function that deals with different signal strenghts
-mpm <- function(survival, growth, reproduction, clim_sd, sig.strength = 1) {
+### Create MPM function that deals with different signal strengths
+mpm <- function(survival, growth, reproduction, clim_sd, sig.strength) {
   ## Basic mpm
   mpm <- matrix(0, nrow = 2, ncol = 2)
   
-  #growth                     Get the error term sd to reflect the sd of the environment sequence
-  mpm[2,1] <- inv_logit((growth * sig.strength[1]) + ((1-sig.strength[1]) * rnorm(1, 0, clim_sd)) ) ### inv_logit(0) = 0.5 (intercept)
-  
+  #growth                    
+  if(is.na(growth)) {
+    mpm[2,1] <- inv_logit(0) ### inv_logit(0) = 0.5 (intercept) 
+  } else {
+    mpm[2,1] <- inv_logit((growth * (sqrt(clim_sd^2 * sig.strength[1])/clim_sd)) + 
+                            ((sqrt(clim_sd^2 * (1-sig.strength[1]))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    ) 
+  }
   # survival
-  mpm[2,2] <- inv_logit((survival * sig.strength[3]) + ((1-sig.strength[3]) * rnorm(1, 0, clim_sd)) )
-  
+  if(is.na(survival)) {
+    mpm[2,2] <- inv_logit(0)
+  } else {
+    mpm[2,2] <- inv_logit((survival * (sqrt(clim_sd^2 * sig.strength[3])/clim_sd)) + 
+                            ((sqrt(clim_sd^2 * (1-sig.strength[3]))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    )
+  }
   # reproduction 
-  mpm[1,2] <- exp(1.2 + (reproduction * sig.strength[2]) + ((1-sig.strength[2]) * rnorm(1, 0, clim_sd)) )
-  
+  if(is.na(reproduction)) {
+    mpm[1,2] <- exp(1.2)
+  } else {
+    mpm[1,2] <- exp(1.2 + 
+                      (reproduction * (sqrt(clim_sd^2 * sig.strength[2])/clim_sd)) + 
+                      ((sqrt(clim_sd^2 * (1-sig.strength[2]))/clim_sd) * rnorm(1, 0, clim_sd)) 
+    )
+  }
   return(mpm)  
 }
 
@@ -43,7 +59,8 @@ sig.strength <- sig.strength/sum(sig.strength)
 ### Simulate Lambda under differnt SD and autocorrelation
 i = sig.strength ## sig.strength needs to be put to i as i was used to loop through sig.strenghts in the original file
 
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(82:97, 138:175, 178:211))
+# Set up parallel and run s&g and U&F simulations
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(98:113, 154:191, 194:227))
 
 ### Save output
 saveRDS(lag, file.path(output_dir, "mpm_diff_ss_lag.RDS"))
@@ -68,7 +85,7 @@ lagpf_df <- lapply(lag_fp, function(x) lapply(x, function(y) y$df) %>%
   mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))
 
 lagpf_p <- ggplot(lagpf_df) + geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
-  labs(colour = "Lag type", title = "Lagged climate in P or F", 
+  labs(colour = "Lag type", title = "Lagged climate in U or F matrix", 
        subtitle = paste("sig.strength surv:", round(sig.strength[3], digits = 2), "growth:",round(sig.strength[1], digits = 2),
                         "fec:", round(sig.strength[2], digits = 2) )) +
   facet_grid(cols = vars(auto_cat)) + scale_colour_manual(values = c("#00AFBB", "#E7B800", "#FC4E07"))

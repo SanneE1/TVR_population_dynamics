@@ -8,7 +8,7 @@ source_lines <- function(file, lines){
 }
 
 ## Get all the packages & functions for simulations
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(1:75))
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(1:92))
 
 # Overwrite output directory to current section
 output_dir <- "results/03_Simulations_mpm_different_lag_periods/"
@@ -17,15 +17,16 @@ output_dir <- "results/03_Simulations_mpm_different_lag_periods/"
 i = 0.5
 
 # Set up parallel and get clim_sd&clim_cor sequences
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(82:97))
+source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(98:113))
 
-
+# Run simulations for different lag periods 1-4 yrs
 for(l in c(1:4)) {
   
   ### Create climate sequences with different lag periods
   lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(5000, clim_sd = clim_sd[x], clim_auto = clim_auto[x], lag = l))
   
-  source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(178:211))
+  ## Run simulations with lag in U/F matrix
+  source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(194:226))
   
   ## Save under different names
   saveRDS(lag_fp, file.path(output_dir, paste("mpm_", l, "_lagfp.RDS", sep = "")))
@@ -75,7 +76,7 @@ ggsave(plot = line_plot, file.path(output_dir, "comparative_line_plot.tiff"))
 
 rel_line_plot1 <- rbind(lag_fp1, lag_fp2, lag_fp3, lag_fp4) %>% 
   pivot_wider(values_from = lambda, names_from = type) %>%
-  mutate(rel.F.diff = (Fkernel - none)/abs(none)) %>%
+  mutate(rel.F.diff = (Fmatrix - none)/abs(none)) %>%
   ggplot(.) +
   geom_smooth(aes(x = clim_sd, y = rel.F.diff, colour = as.factor(lag)))+ 
   labs(colour = "# of yrs lagged") +
@@ -84,10 +85,10 @@ rel_line_plot1 <- rbind(lag_fp1, lag_fp2, lag_fp3, lag_fp4) %>%
 
 rel_line_plot2 <- rbind(lag_fp1, lag_fp2, lag_fp3, lag_fp4) %>% 
   pivot_wider(values_from = lambda, names_from = type) %>%
-  mutate(rel.F.diff = (Fkernel - none)/abs(none)) %>%
+  mutate(rel.F.diff = (Fmatrix - none)/abs(none)) %>%
   ggplot(.) +
   geom_smooth(aes(x = clim_sd, y = rel.F.diff, colour = auto_cat))+ 
-  labs(colour = "# of yrs lagged") +
+  labs(colour = "Autocorrelation") +
   facet_grid(cols = vars(lag)) + 
   theme(legend.position = "bottom")
 
@@ -96,7 +97,7 @@ ggsave(plot = rel_line_plot2, file.path(output_dir, "rel_line_plot2.tiff"))
 
 box_plot <- rbind(lag_fp1, lag_fp2, lag_fp3, lag_fp4) %>% 
   pivot_wider(values_from = lambda, names_from = type) %>%
-  mutate(rel.F.diff = (Fkernel - none)/abs(none)) %>% 
+  mutate(rel.F.diff = (Fmatrix - none)/abs(none)) %>% 
   filter(round(clim_sd, digits = 1) == 1.1) %>%
   ggplot(.) +
   geom_boxplot(aes(x = auto_cat, y = rel.F.diff, fill = as.factor(lag))) +

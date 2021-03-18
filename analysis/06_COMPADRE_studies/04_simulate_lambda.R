@@ -118,13 +118,10 @@ st.lamb <- function(growth, reproduction, clim_sd, clim_auto, sig.strength){
   
   env <- data.frame(growth = growth,
                     reproduction = reproduction)
-  
-  env <- env[complete.cases(env), ]
-  
   env <- split(env, seq(nrow(env)))
   
   ### Get all mpm's
-  mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction, sig.strength = sig.strength))
+  mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction, clim_sd = clim_sd, sig.strength = sig.strength))
   
   df <- data.frame(lambda = stoch.growth.rate(mats, maxt = 1000, verbose = F)$sim,
                    clim_sd = clim_sd,
@@ -144,14 +141,14 @@ lag_clim <- lapply(as.list(c(1:nrow(df))), function(x) create_seq(clim_sd = df$c
 
 
 # species specific mpm
-  mpm <- function(U_clim, F_clim, sig.strength) {
+  mpm <- function(U_clim, F_clim, clim_sd, sig.strength) {
     
-    Umat <- Ucell_values$mean + Ucell_values$sd * (U_clim * sig.strength) + 
+    Umat <- Ucell_values$mean + Ucell_values$sd * (U_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
       rnorm(n = length(Ucell_values$sd),
-        mean = 0, sd = (Ucell_values$sd * (1-sig.strength))) 
-    Fmat <- Fcell_values$mean + Fcell_values$sd * (F_clim * sig.strength) + 
+        mean = 0, sd = (Ucell_values$sd * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd))) 
+    Fmat <- Fcell_values$mean + Fcell_values$sd * (F_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
       rnorm(n = length(Fcell_values$sd),
-            mean = 0, sd = (Fcell_values$sd * (1-sig.strength))) 
+            mean = 0, sd = (Fcell_values$sd * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd))) 
     
     Umat <- case_when(Umat < 0 ~ 0,
                       Umat > 1 ~ 1,
