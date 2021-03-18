@@ -193,7 +193,7 @@ output_dir <- args[2]
 
 n_pop = length(unique(species$MatrixPopulation[which(species$SpeciesAuthor == i)]))
 
-if(length(n_pop == 1)) {
+if(is.na(j)) {
   output_file <- paste0("mpm_", i, "_laguf.RDS")
 } else {
   output_file <- paste("mpm", i, j, "laguf.RDS", sep = "_")
@@ -230,8 +230,13 @@ mats$sd <- df$clim_sd[n]
 cells <- append(cells,
                 mats)
 
-
 }
-saveRDS(cells, file.path(output_dir, "cell_values_HnL.RDS"))
+
+if(is.na(j)) {
+  saveRDS(cells, file.path(output_dir, paste0(i, "_cell_values_HnL.RDS")))
+} else {
+saveRDS(cells, file.path(output_dir, paste(i, j, "cell_values_HnL.RDS", sep= "_")))
+}
+
 
 Sys.time() - start
