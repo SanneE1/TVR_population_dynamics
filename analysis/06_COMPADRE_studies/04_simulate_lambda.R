@@ -224,7 +224,8 @@ env <- data.frame(growth = growth,
 env <- env[complete.cases(env), ]
 env <- split(env, seq(nrow(env)))
 ### Get all mpm's
-mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction, sig.strength = sig.strength))
+mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction, clim_sd = sd(growth, na.rm = T), 
+                                    sig.strength = sig.strength))
 
 mats = data.frame(t(lapply(mats, as.vector) %>% bind_rows))
 
