@@ -9,7 +9,8 @@ load("data/COMPADRE_v.6.21.1.0.RData")
 multiple_Ind <- compadre$metadata %>%
   filter(MatrixComposite == "Individual" & 
            MatrixSplit == "Divided" &
-           MatrixFec == "Yes") %>%
+           MatrixFec == "Yes",
+         MatrixTreatment == "Unmanipulated") %>%
   select(SpeciesAuthor, MatrixPopulation, StudyStart, OrganismType, Lat, Lon) %>%
   group_by(SpeciesAuthor, MatrixPopulation) %>%
   summarise(OrganismType = OrganismType,
@@ -20,28 +21,6 @@ multiple_Ind <- compadre$metadata %>%
   distinct() %>%
   filter(n >= 10)
 
-# Only more than 10 individual matrices for annual species if you do not group per population
-# per population; 
-#             Setaria_faberi - 3 pops - 8 yrs each
-#             Hordeum_spontaneum - 1 pop - 4 yrs
-# All others are only 2 yrs
-
-annual <- compadre$metadata %>%
-  filter(OrganismType == "Annual",
-         MatrixSplit == "Divided",
-         MatrixFec == "Yes",
-         MatrixComposite == "Individual") %>%
-  select(SpeciesAuthor, MatrixPopulation, StudyStart, OrganismType, Lat, Lon, MatrixComposite) %>%
-  group_by(SpeciesAuthor) %>%
-  summarise(OrganismType = OrganismType,
-            Start = StudyStart,
-            Lat = Lat,
-            Lon = Lon,
-            n = n())  %>%
-  distinct() %>%
-  filter(n >= 10)
-
-multiple_Ind <- rbind(multiple_Ind, annual)
 
 #-----------------------------------------------------------
 # Gather Life histories
@@ -95,11 +74,9 @@ get_all <- function(SpeciesAuthor, MatrixPopulation) {
     meanU <- matrix(Ucell_values$mean, nrow = dim, ncol = dim)
     meanF <- matrix(Fcell_values$mean, nrow = dim, ncol = dim)
     
-    lifetable <- makeLifeTable(meanU, meanF, nSteps = 50) %>% drop_na()
-    
     R0 <- R0(meanU, meanF)                                               ## Net reproductive value
     La <- lifeTimeRepEvents(meanU, meanF)$La                             ## mean age at maturity
-    Gen_time <- sum(lifetable$lxmx * lifetable$x) / sum(lifetable$lxmx)  ## Generation time
+    Gen_time <- generation.time(meanA)                                   ## Generation time
     
   }else{
     
