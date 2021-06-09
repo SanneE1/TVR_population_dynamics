@@ -37,16 +37,6 @@ id <- which(compadre$metadata$SpeciesAuthor == i &
   
 }
 
-# Required functions
-
-logit <- function(x) log(x/(1-x))
-
-inv_logit <- function(x) {
-  return(
-    1/(1 + exp(-(x)))
-  )
-}
-
 #-----------------------------------------------------------
 # Select mpm's 
 #-----------------------------------------------------------
@@ -93,100 +83,106 @@ Fcell_values <- Fmats %>%
 ## I assume that when sig.strength is 1 the size of the climate effect is 1 SD. A sig.strength of 0.5 = 0.5 * SD for climate effect and random noise of Norm(0, 0.5*SD)
 
 ### Create environmental sequence ----------------------------
-create_seq <- function(clim_sd, clim_corr, sig.strength, lag = 1, n_it = 5000) { 
+create_seq <- function(n_it, clim_sd, clim_auto, lag) { 
   for(n in c(1:(n_it+lag))){ 
     if(n == 1) {
       seq <- rnorm(1)
     } else {
-      seq[n] <- clim_corr * seq[n-1] + rnorm(1)
+      seq[n] <- clim_auto * seq[n-1] + rnorm(1)
     }
   }
   seq <- scale(seq) * clim_sd
   lagged <- c(rep(NA, lag), seq)
   recent <- c(seq, rep(NA, lag))
   df <- data.frame(recent = recent,
-                   lagged = lagged,
-                   sig.strength = sig.strength)
+                   lagged = lagged)
   return(df)
 }
- 
+
 # "Stocastic" mpm -----------------------------------
 
-st.lamb <- function(growth, reproduction, clim_sd, clim_auto, sig.strength){
+st.lamb <- function(env_U, env_F, 
+                    clim_sd, clim_auto, sig.strength) {
   
-  n_it = length(growth)
+  n_it = length(env_U)
   
-  env <- data.frame(growth = growth,
-                    reproduction = reproduction)
-  env <- split(env, seq(nrow(env)))
+  env <- list(U_clim = env_U,
+              F_clim = env_F,
+              clim_sd = rep(clim_sd, n_it),
+              sig.strength = rep(sig.strength, n_it))
   
   ### Get all mpm's
-  mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction, clim_sd = clim_sd, sig.strength = sig.strength))
+  mats <- pmap(env, mpm) 
   
-  df <- data.frame(lambda = stoch.growth.rate(mats, maxt = 1000, verbose = F)$sim,
+  
+  df <- data.frame(lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
                    clim_sd = clim_sd,
-                   clim_auto = clim_auto)
+                   clim_auto = clim_auto,
+                   sig.strength = sig.strength)
   
   return(df)
 }
 
 clim_sd <- seq(from = 0.01, to = 2, length.out = 10)
 clim_corr <- c(-0.9,0,0.9)
-sig.strength <- c(1, 0.5, 0.1)
 
-df <- expand.grid(clim_sd, clim_corr, sig.strength) 
-df <- do.call("rbind", replicate(30, df, simplify = FALSE)) %>% `names<-`(., c("clim_sd", "clim_auto", "sig.strength"))
+df <- expand.grid(clim_sd, clim_corr) 
+df <- do.call("rbind", replicate(30, df, simplify = FALSE)) %>% `names<-`(., c("clim_sd", "clim_auto"))
 
-lag_clim <- lapply(as.list(c(1:nrow(df))), function(x) create_seq(clim_sd = df$clim_sd[x], clim_corr = df$clim_auto[x], sig.strength = df$sig.strength[x]) %>% filter(complete.cases(.)))
+lag_clim <- lapply(as.list(c(1:nrow(df))), function(x) 
+  create_seq(n_it = 5000,clim_sd = df$clim_sd[x], clim_auto = df$clim_auto[x], lag = 1) %>% filter(complete.cases(.)))
 
 
 # species specific mpm
-  mpm <- function(U_clim, F_clim, clim_sd, sig.strength) {
-    
-    Umat <- Ucell_values$mean + Ucell_values$sd * (U_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
-      rnorm(n = length(Ucell_values$sd),
-        mean = 0, sd = (Ucell_values$sd * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd))) 
-    Fmat <- Fcell_values$mean + Fcell_values$sd * (F_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd)) + 
-      rnorm(n = length(Fcell_values$sd),
-            mean = 0, sd = (Fcell_values$sd * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd))) 
-    
-    Umat <- case_when(Umat < 0 ~ 0,
-                      Umat > 1 ~ 1,
-                      between(Umat, 0, 1) ~ Umat)
-
-    Fmat <- case_when(Fmat <= 0 ~ 0,
-                      Fmat > 0 ~ Fmat)
-    Amat <- Umat + Fmat
-    mpm <- matrix(Amat, nrow = dim)
+mpm <- function(U_clim, F_clim, sig.strength, clim_sd) {
   
-    return(mpm)  
-  }
+  devU <- U_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
+    rnorm(length(Ucell_values$mean), mean = 0, sd = clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
+  pU <- pnorm(devU, mean = 0, sd = clim_sd) 
+  Umat <- qbeta(pU, 
+                (((Ucell_values$mean*(1-Ucell_values$mean))/(Ucell_values$sd * clim_sd)^2) - 1) * Ucell_values$mean,
+                (((Ucell_values$mean*(1-Ucell_values$mean))/(Ucell_values$sd * clim_sd)^2) - 1) * (1 - Ucell_values$mean)) %>% 
+    replace_na(., 0)
+  
+  devF <- F_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
+    rnorm(length(Fcell_values$mean), mean = 0, sd = clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
+  pF <- pnorm(devF, mean = 0, sd = clim_sd) 
+  Fmat <- qgamma(pF, 
+                 (Fcell_values$mean^2)/(Fcell_values$sd * clim_sd)^2, 
+                 (Fcell_values$mean)/(Fcell_values$sd * clim_sd)^2) %>% 
+    replace_na(., 0)
+  
+  Amat <- Umat + Fmat
+  mpm <- matrix2(Amat)
+  
+  return(mpm)  
+}
 
   
   #### Lagged effect in U or F matrix
   
   lag_u <- pblapply(lag_clim, 
-                    function(x) st.lamb(growth = x$lagged,
-                                        reproduction = x$recent,
+                    function(x) st.lamb(env_U = x$lagged,
+                                        env_F = x$recent,
                                         clim_sd = sd(x$recent, na.rm = T),
                                         clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
-                                        sig.strength = unique(x$sig.strength))
+                                        sig.strength = 1)
   ) 
   
   lag_f <- pblapply(lag_clim, 
-                    function(x) st.lamb(growth = x$recent,
-                                        reproduction = x$lagged,
+                    function(x) st.lamb(env_U = x$recent,
+                                        env_F = x$lagged,
                                         clim_sd = sd(x$recent, na.rm = T),
                                         clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
-                                        sig.strength = unique(x$sig.strength))
+                                        sig.strength = 1)
   ) 
   
   lag_n <- pblapply(lag_clim, 
-                    function(x) st.lamb(growth = x$recent,
-                                        reproduction = x$recent,
+                    function(x) st.lamb(env_U = x$recent,
+                                        env_F = x$recent,
                                         clim_sd = sd(x$recent, na.rm = T),
                                         clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
-                                        sig.strength = unique(x$sig.strength))
+                                        sig.strength = 1)
   ) 
   
   lag_uf <- list("Umatrix" = lag_u,
