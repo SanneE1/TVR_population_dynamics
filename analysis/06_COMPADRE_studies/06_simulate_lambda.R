@@ -191,15 +191,15 @@ mpm <- function(U_clim, F_clim, sig.strength, clim_sd) {
   
 output_dir <- args[2]
 
-n_pop = length(unique(species$MatrixPopulation[which(species$SpeciesAuthor == i)]))
-
-if(is.na(j)) {
-  output_file <- paste0("mpm_", i, "_laguf.RDS")
-} else {
-  output_file <- paste("mpm", i, j, "laguf.RDS", sep = "_")
-}
-
-saveRDS(lag_uf, file.path(output_dir, output_file))
+#n_pop = length(unique(species$MatrixPopulation[which(species$SpeciesAuthor == i)]))
+#
+#if(is.na(j)) {
+#  output_file <- paste0("mpm_", i, "_laguf.RDS")
+#} else {
+#  output_file <- paste("mpm", i, j, "laguf.RDS", sep = "_")
+#}
+#
+#saveRDS(lag_uf, file.path(output_dir, output_file))
 
 
 ## Run mpm sequences again
