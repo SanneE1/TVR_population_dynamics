@@ -1,8 +1,13 @@
+rm(list = ls())
 library(tidyverse)
 library(ggplot2)
 library(pbapply)
 library(popbio)
 library(scales)
+library(boot)
+library(parallel)
+
+n_it = 5000
 
 output_dir <- "results/06_COMPADRE_studies/actual_sd_auto/"
 
@@ -10,26 +15,24 @@ output_dir <- "results/06_COMPADRE_studies/actual_sd_auto/"
 # Create functions
 #-----------------------------------------------------------
 
-logit <- function(x) log(x/(1-x))
-
-inv_logit <- function(x) {
-  return(
-    1/(1 + exp(-(x)))
-  )
-}
-
 ### Create environmental sequence ----------------------------
-create_seq <- function(clim_sd, clim_corr, sig.strength, lag = 1, n_it = 5000) { 
+### creates a sequence of climate anomalies whith a specified standard deviation and autocorrelation.
+### the function then creates another sequence of the same length and standard deviation, to be used as random noise
+### of each sequence two vectors are created, one which is the "original" and a second, which is offset by a specified period
+### to create a lagged sequence
+create_seq <- function(n_it, clim_sd, clim_auto, sig.strength, lag = 1) { 
   for(n in c(1:(n_it+lag))){ 
     if(n == 1) {
       seq <- rnorm(1)
     } else {
-      seq[n] <- clim_corr * seq[n-1] + rnorm(1)
+      seq[n] <- clim_auto * seq[n-1] + rnorm(1)
     }
   }
   seq <- scale(seq) * clim_sd
+  
   lagged <- c(rep(NA, lag), seq)
   recent <- c(seq, rep(NA, lag))
+  
   df <- data.frame(recent = recent,
                    lagged = lagged,
                    sig.strength = sig.strength)
@@ -38,18 +41,22 @@ create_seq <- function(clim_sd, clim_corr, sig.strength, lag = 1, n_it = 5000) {
 
 # "Stocastic" mpm -----------------------------------
 
-st.lamb <- function(growth, reproduction, clim_auto, sig.strength){
+st.lamb <- function(env_U, env_F, 
+                    clim_sd, clim_auto, sig.strength) {
   
-  n_it = length(growth)
+  n_it = length(env_U)
   
-  env <- data.frame(growth = growth,
-                    reproduction = reproduction)
-  env <- split(env, seq(nrow(env)))
+  env <- list(U_clim = env_U,
+              F_clim = env_F,
+              clim_sd = rep(clim_sd, n_it),
+              sig.strength = rep(sig.strength, n_it))
   
   ### Get all mpm's
-  mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction, sig.strength = sig.strength))
+  mats <- pmap(env, mpm) #%>% Filter(Negate(anyNA), .)
   
-  df <- data.frame(lambda = stoch.growth.rate(mats, maxt = 5000, verbose = F)$sim,
+  
+  df <- data.frame(lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
+                   clim_sd = clim_sd,
                    clim_auto = clim_auto,
                    sig.strength = sig.strength)
   
@@ -90,13 +97,19 @@ df$temp_diffU_0.25 <- NA
 df$temp_diffU_0.5 <- NA
 df$temp_diffU_1 <- NA
 
+df$cov_sg <- NA
+df$cov_sf <- NA
+df$cov_gf <- NA
+
 
 ### Run lambda simulations using matrices, sd and auto of specific populations
 ### 30 repetitions for 3 different climate signal strengths
 
-load("data/COMPADRE_v.X.X.X.4.RData")
+load("data/COMPADRE_v.6.21.1.0.RData")
 
 for(sp in c(1:nrow(df))) {
+  
+  if(is.na(df$prec_auto[sp])) next   ## if prec_auto is na, prec_sd, tmean_auto & tmean_sd are also na
   
   i = df$SpeciesAuthor[sp]
   j = df$MatrixPopulation[sp]
@@ -151,26 +164,24 @@ for(sp in c(1:nrow(df))) {
   #-----------------------------------------------------------
   # create species specific 
   #-----------------------------------------------------------
-  mpm <- function(U_clim, F_clim, sig.strength) {
+  mpm <- function(U_clim, F_clim, sig.strength, clim_sd) {
     
-    Umat <- Ucell_values$mean + (Ucell_values$sd * U_clim) * (sqrt(Ucell_values$sd^2 * sig.strength)/Ucell_values$sd) + 
-      rnorm(n = length(Ucell_values$sd),
-            mean = 0, sd = (Ucell_values$sd * (sqrt(Ucell_values$sd^2 * (1-sig.strength))/Ucell_values$sd))) 
-    Fmat <- Fcell_values$mean + (Fcell_values$sd * F_clim) * (sqrt(Fcell_values$sd^2 * sig.strength)/Fcell_values$sd) + 
-      rnorm(n = length(Fcell_values$sd),
-            mean = 0, sd = (Fcell_values$sd * (sqrt(Fcell_values$sd^2 * (1-sig.strength))/Fcell_values$sd))) 
+    devU <- U_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
+      rnorm(length(Ucell_values$mean), mean = 0, sd = clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
+    pU <- pnorm(devU, mean = 0, sd = clim_sd) 
+    Umat <- qbeta(pU, 
+                  (((Ucell_values$mean*(1-Ucell_values$mean))/(Ucell_values$sd * clim_sd)^2) - 1) * Ucell_values$mean,
+                  (((Ucell_values$mean*(1-Ucell_values$mean))/(Ucell_values$sd * clim_sd)^2) - 1) * (1 - Ucell_values$mean)) %>% 
+      replace_na(., 0)
     
-    ### nan's get produced in the above calculations, as some cells don't have values and thus there's a 
-    ### division with 0 in the correction factors. The first case_when statement corrects this back to 0
+    devF <- F_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
+      rnorm(length(Fcell_values$mean), mean = 0, sd = clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
+    pF <- pnorm(devF, mean = 0, sd = clim_sd) 
+    Fmat <- qgamma(pF, 
+                   (Fcell_values$mean^2)/(Fcell_values$sd * clim_sd)^2, 
+                   (Fcell_values$mean)/(Fcell_values$sd * clim_sd)^2) %>% 
+      replace_na(., 0)
     
-    Umat <- case_when(is.nan(Umat) ~ 0,
-                      Umat < 0 ~ 0,
-                      Umat > 1 ~ 1,
-                      between(Umat, 0, 1) ~ Umat)
-    
-    Fmat <- case_when(is.nan(Fmat) ~ 0,
-                      Fmat <= 0 ~ 0,
-                      Fmat > 0 ~ Fmat)
     Amat <- Umat + Fmat
     mpm <- matrix(Amat, nrow = dim)
     
@@ -179,35 +190,43 @@ for(sp in c(1:nrow(df))) {
   
   ## Create climate sequences with population's sd and autocorrelation 
   lag_prcp <- lapply(as.list(rep(c(1,0.5,0.25, 0.05), 30)), function(x) 
-    create_seq(clim_sd = 1, clim_corr = df$prec_auto[sp], sig.strength = x) %>% filter(complete.cases(.)))
-  
+    create_seq(n_it = n_it, clim_sd = 1, clim_auto = df$prec_auto[sp], sig.strength = x) %>% 
+      filter(complete.cases(.)))
+
   lag_temp <- lapply(as.list(rep(c(1,0.5,0.25, 0.05), 30)), function(x) 
-    create_seq(clim_sd = 1, clim_corr = df$tmean_auto[sp], sig.strength = x) %>% filter(complete.cases(.)))
+    create_seq(n_it = n_it, clim_sd = 1, clim_auto = df$tmean_auto[sp], sig.strength = x) %>% 
+      filter(complete.cases(.)))
   
   
   #-----------------------------------------------------------
   # Run simulations for precipitation
   #-----------------------------------------------------------
+  # Set up parallel runs
+  no_cores <- detectCores()
+  cl <- makeCluster(no_cores - 2)
+  ## export libraries to workers
+  clusterEvalQ(cl, c(library(popbio), library(tidyverse), library(purrr), library(boot)))
+  clusterExport(cl, c("st.lamb", "mpm", "lag_prcp", "lag_temp", "dim",
+                      "Ucell_values", "Fcell_values", "df", "sp"))
+  
+  
   #### Lagged effect in U or F matrix
   
-  plag_u <- pblapply(lag_prcp, 
-                     function(x) st.lamb(growth = x$lagged,
-                                         reproduction = x$recent,
+  plag_u <- pblapply(cl = cl,
+                     lag_prcp, 
+                     function(x) st.lamb(env_U = x$lagged,
+                                         env_F = x$recent,
+                                         clim_sd = 1,
                                          clim_auto = df$prec_auto[sp],
                                          sig.strength = unique(x$sig.strength))
   ) 
   
-  # plag_f <- pblapply(lag_prcp, 
-  #                   function(x) st.lamb(growth = x$recent,
-  #                                       reproduction = x$lagged,
-  #                                       clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
-  #                                       sig.strength = unique(x$sig.strength))
-  # ) 
-  
-  plag_n <- pblapply(lag_prcp, 
-                     function(x) st.lamb(growth = x$recent,
-                                         reproduction = x$recent,
-                                         clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
+  plag_n <- pblapply(cl = cl,
+                     lag_prcp, 
+                     function(x) st.lamb(env_U = x$recent,
+                                         env_F = x$recent,
+                                         clim_sd = 1,
+                                         clim_auto = df$prec_auto[sp],
                                          sig.strength = unique(x$sig.strength))
   ) 
   
@@ -217,27 +236,28 @@ for(sp in c(1:nrow(df))) {
   #### Lagged effect in U or F matrix
   
   
-  tlag_u <- pblapply(lag_temp, 
-                     function(x) st.lamb(growth = x$lagged,
-                                         reproduction = x$recent,
+  tlag_u <- pblapply(cl = cl, 
+                     lag_temp, 
+                     function(x) st.lamb(env_U = x$lagged,
+                                         env_F = x$recent,
+                                         clim_sd = 1,
                                          clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                          sig.strength = unique(x$sig.strength))
   ) 
   
-  # tlag_f <- pblapply(lag_temp, 
-  #                    function(x) st.lamb(growth = x$recent,
-  #                                        reproduction = x$lagged,
-  #                                        clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
-  #                                        sig.strength = unique(x$sig.strength))
-  # ) 
   
-  tlag_n <- pblapply(lag_temp, 
-                     function(x) st.lamb(growth = x$recent,
-                                         reproduction = x$recent,
+  tlag_n <- pblapply(cl = cl,
+                     lag_temp, 
+                     function(x) st.lamb(env_U = x$recent,
+                                         env_F = x$recent,
+                                         clim_sd = 1,
                                          clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                          sig.strength = unique(x$sig.strength))
   ) 
   
+  stopCluster(cl)
+  
+  save(plag_u, plag_n, tlag_u, tlag_n, file = file.path(output_dir, "rds", paste0("simulations_", i,"_", j, ".RData"))) 
   
   ### Get differences in lambda between Ulagged and none for precipitation
   df1 <- left_join(
@@ -267,6 +287,20 @@ for(sp in c(1:nrow(df))) {
   
   ### Assign differences to main data.frame
   df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j), c(15:22)] <- df3
+  
+  ### Get survival, growth and fecundity to calculate covariance of the vital rates
+  u_mat <- lapply(as.list(id), function(x) compadre$mat[x][[1]]$matU %>% `row.names<-`(colnames(compadre$mat[x][[1]]$matU)))
+  f_mat <- lapply(as.list(id), function(x) compadre$mat[id][[1]]$matF %>% 
+                    `row.names<-`(colnames(compadre$mat[id][[1]]$matU)) %>% 
+                    `colnames<-`(colnames(compadre$mat[id][[1]]$matU)) )
+  
+  gr <- map(u_mat, vr_growth) %>% unlist()
+  su <- map(u_mat, vr_survival) %>% unlist()
+  fe <- map2(u_mat, f_mat, vr_fecundity) %>% unlist()
+  
+  df$cov_sg[which(df$SpeciesAuthor == i & df$MatrixPopulation == j)] <- cov(gr, su, use = "pairwise.complete.obs")
+  df$cov_sf[which(df$SpeciesAuthor == i & df$MatrixPopulation == j)] <- cov(gr, fe, use = "pairwise.complete.obs")
+  df$cov_gf[which(df$SpeciesAuthor == i & df$MatrixPopulation == j)] <- cov(su, fe, use = "pairwise.complete.obs")
   
   
   ### Set up dataframe for lambda plots
@@ -301,61 +335,70 @@ for(sp in c(1:nrow(df))) {
   
   ## Run mpm sequences again
   # Randomly select climate sequences to check the cell values with sig.strength=1
-  n = sample(c(1:30),1)
+  n1 = sample(seq(1,length(lag_prcp), by = 4),1)
+  n0.5 = sample(seq(2,length(lag_prcp), by = 4),1)
   
-  growth <- lag_prcp[[n]]$recent
-  reproduction <- lag_prcp[[n]]$lagged
-  
-  n_it = length(growth)
-  env <- data.frame(growth = growth,
-                    reproduction = reproduction)
-  env <- env[complete.cases(env), ]
-  env <- split(env, seq(nrow(env)))
   ### Get all Umat and Fmat values
-  matsU <- function(climate, sig.strength) {
-    Umat <- Ucell_values$mean + (Ucell_values$sd * climate$growth) * (sqrt(Ucell_values$sd^2 * sig.strength)/Ucell_values$sd) + 
-      rnorm(n = length(Ucell_values$sd),
-            mean = 0, sd = (Ucell_values$sd * (sqrt(Ucell_values$sd^2 * (1-sig.strength))/Ucell_values$sd))) 
-    Umat <- case_when(is.nan(Umat) ~ 0,
-                      Umat < 0 ~ 0,
-                      Umat > 1 ~ 1,
-                      between(Umat, 0, 1) ~ Umat)
+  matsU <- function(U_clim, clim_sd, sig.strength) {
+    devU <- U_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
+      rnorm(length(Ucell_values$mean), mean = 0, sd = clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
+    pU <- pnorm(devU, mean = 0, sd = clim_sd) 
+    Umat <- qbeta(pU, 
+                  (((Ucell_values$mean*(1-Ucell_values$mean))/(Ucell_values$sd * clim_sd)^2) - 1) * Ucell_values$mean,
+                  (((Ucell_values$mean*(1-Ucell_values$mean))/(Ucell_values$sd * clim_sd)^2) - 1) * (1 - Ucell_values$mean))
+    Umat <- as.data.frame(t(Umat))
+    colnames(Umat) <- c(1:dim^2)
+    
     return(Umat)
   }
   
-  matsF <- function(climate, sig.strength) {
-    Fmat <- Fcell_values$mean + (Fcell_values$sd * climate$reproduction) * (sqrt(Fcell_values$sd^2 * sig.strength)/Fcell_values$sd) + 
-      rnorm(n = length(Fcell_values$sd),
-            mean = 0, sd = (Fcell_values$sd * (sqrt(Fcell_values$sd^2 * (1-sig.strength))/Fcell_values$sd))) 
-    Fmat <- case_when(is.nan(Fmat) ~ 0,
-                      Fmat <= 0 ~ 0,
-                      Fmat > 0 ~ Fmat)
+  matsF <- function(F_clim, clim_sd, sig.strength) {
+    devF <- F_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
+      rnorm(length(Fcell_values$mean), mean = 0, sd = clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
+    pF <- pnorm(devF, mean = 0, sd = clim_sd) 
+    Fmat <- qgamma(pF, 
+                   (Fcell_values$mean^2)/(Fcell_values$sd * clim_sd)^2, 
+                   (Fcell_values$mean)/(Fcell_values$sd * clim_sd)^2) %>% replace_na(., 0)
+    Fmat <- as.data.frame(t(Fmat))
+    colnames(Fmat) <- c(1:dim^2)
+    
     return(Fmat)
   }
   
   
   ## Set up dataframes to compare simulated cell values to observed
-  U1 <- lapply(env, function(x) matsU(x, sig.strength=1))
-  U1 <- data.frame(t(lapply(U1, as.vector) %>% bind_rows)) %>% 
+  U1 <- pmap(list(U_clim = lag_prcp[[n1]]$recent, 
+                  clim_sd = 1, 
+                  sig.strength = lag_prcp[[n1]]$sig.strength), 
+             matsU) %>% bind_rows %>%
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
     mutate(cell = as.integer(gsub("X", "", cell)),
            matrix = "U",
            sig.strength = 1)
-  U0.5 <- lapply(env, function(x) matsU(x, sig.strength=0.5))
-  U0.5 <- data.frame(t(lapply(U0.5, as.vector) %>% bind_rows)) %>% 
+  
+  
+  U0.5 <- pmap(list(U_clim = lag_prcp[[n0.5]]$recent, 
+                    clim_sd = 1, 
+                    sig.strength = lag_prcp[[n0.5]]$sig.strength), 
+               matsU) %>% bind_rows %>% 
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
     mutate(cell = as.integer(gsub("X", "", cell)),
            matrix = "U",
            sig.strength = 0.5) 
   
-  F1 <- lapply(env, function(x) matsF(x, sig.strength = 1))
-  F1 <- data.frame(t(lapply(F1, as.vector) %>% bind_rows)) %>% 
+  F1 <- pmap(list(F_clim = lag_prcp[[n1]]$recent, 
+                  clim_sd = 1, 
+                  sig.strength = lag_prcp[[n1]]$sig.strength), 
+             matsF) %>% bind_rows %>% 
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
     mutate(cell = as.integer(gsub("X", "", cell)),
            matrix = "F",
-           sig.strength = 1)                
-  F0.5 <- lapply(env, function(x) matsF(x, sig.strength = 0.5))
-  F0.5 <- data.frame(t(lapply(F0.5, as.vector) %>% bind_rows)) %>% 
+           sig.strength = 1) 
+  
+  F0.5 <- pmap(list(F_clim = lag_prcp[[n0.5]]$recent, 
+                    clim_sd = 1, 
+                    sig.strength = lag_prcp[[n0.5]]$sig.strength), 
+               matsF) %>% bind_rows %>% 
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
     mutate(cell = as.integer(gsub("X", "", cell)),
            matrix = "F",
@@ -366,7 +409,7 @@ for(sp in c(1:nrow(df))) {
                      Fcell_values %>% select(sd) %>% mutate(matrix = "F") %>% rename(actual_sd = sd) %>%
                        tibble::rownames_to_column(var = "cell") %>% mutate(cell = as.integer(cell)))
   
-  U <- Umats %>% t %>% as.data.frame() %>%
+  Uobs <- Umats %>% t %>% as.data.frame() %>%
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
     mutate(cell = as.integer(gsub("V", "", cell)))
   
@@ -403,7 +446,7 @@ for(sp in c(1:nrow(df))) {
   
   ## Compare simulated distribution with observed
   valuesUobs <- ggplot() + 
-    geom_histogram(data = U, aes(x = value, y = stat(width*density), fill = "Observed")) + 
+    geom_histogram(data = Uobs, aes(x = value, y = stat(width*density), fill = "Observed")) + 
     geom_histogram(data = U0.5, aes(x = value, y = -stat(width*density), fill = "Simulated")) +
     facet_wrap(vars(cell), scales = "free", dir = "v") +
     scale_y_continuous(labels = percent_format()) + labs(title = "Observed vs. simulated matrix cell values" , 
@@ -428,11 +471,11 @@ for(sp in c(1:nrow(df))) {
   
   pdf(filename)
   
-  valuesUobs
-  valuesFobs
-  sds
-  valuesUsig
-  valuesFsig
+  print(valuesUobs)
+  print(valuesFobs)
+  print(sds)
+  print(valuesUsig)
+  print(valuesFsig)
   
   dev.off()
   
@@ -440,6 +483,7 @@ for(sp in c(1:nrow(df))) {
 
 
 
+write.csv(df, file.path(output_dir, "species_information.csv"))
 
 
 
