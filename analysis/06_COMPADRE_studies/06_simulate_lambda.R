@@ -5,6 +5,8 @@ suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(faux))
 suppressPackageStartupMessages(library(patchwork))
 suppressPackageStartupMessages(library(Rage))
+suppressPackageStartupMessages(library(purrr))
+suppressPackageStartupMessages(library(tidyr))
 
 start <- Sys.time()
 start
@@ -134,7 +136,7 @@ lag_clim <- lapply(as.list(c(1:nrow(df))), function(x)
 
 
 # species specific mpm
-mpm <- function(U_clim, F_clim, sig.strength, clim_sd) {
+mpm <- function(U_clim, F_clim, sig.strength = 1, clim_sd) {
   
   devU <- U_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
     rnorm(length(Ucell_values$mean), mean = 0, sd = clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
@@ -161,44 +163,44 @@ mpm <- function(U_clim, F_clim, sig.strength, clim_sd) {
   
   #### Lagged effect in U or F matrix
   
-  lag_u <- pblapply(lag_clim, 
-                    function(x) st.lamb(env_U = x$lagged,
-                                        env_F = x$recent,
-                                        clim_sd = sd(x$recent, na.rm = T),
-                                        clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
-                                        sig.strength = 1)
-  ) 
+ # lag_u <- pblapply(lag_clim, 
+ #                   function(x) st.lamb(env_U = x$lagged,
+ #                                       env_F = x$recent,
+ #                                       clim_sd = sd(x$recent, na.rm = T),
+ #                                       clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
+ #                                       sig.strength = 1)
+ # ) 
   
-  lag_f <- pblapply(lag_clim, 
-                    function(x) st.lamb(env_U = x$recent,
-                                        env_F = x$lagged,
-                                        clim_sd = sd(x$recent, na.rm = T),
-                                        clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
-                                        sig.strength = 1)
-  ) 
+ # lag_f <- pblapply(lag_clim, 
+ #                   function(x) st.lamb(env_U = x$recent,
+ #                                       env_F = x$lagged,
+ #                                       clim_sd = sd(x$recent, na.rm = T),
+ #                                       clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
+ #                                       sig.strength = 1)
+ # ) 
   
-  lag_n <- pblapply(lag_clim, 
-                    function(x) st.lamb(env_U = x$recent,
-                                        env_F = x$recent,
-                                        clim_sd = sd(x$recent, na.rm = T),
-                                        clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
-                                        sig.strength = 1)
-  ) 
+ # lag_n <- pblapply(lag_clim, 
+ #                   function(x) st.lamb(env_U = x$recent,
+ #                                       env_F = x$recent,
+ #                                       clim_sd = sd(x$recent, na.rm = T),
+ #                                       clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
+ #                                       sig.strength = 1)
+ # ) 
   
-  lag_uf <- list("Umatrix" = lag_u,
-                 "Fmatrix" = lag_f,
-                 "None" = lag_n)
+ # lag_uf <- list("Umatrix" = lag_u,
+ #                "Fmatrix" = lag_f,
+ #                "None" = lag_n)
   
-output_dir <- args[2]
+#output_dir <- args[2]
 
 #n_pop = length(unique(species$MatrixPopulation[which(species$SpeciesAuthor == i)]))
-#
+
 #if(is.na(j)) {
 #  output_file <- paste0("mpm_", i, "_laguf.RDS")
 #} else {
 #  output_file <- paste("mpm", i, j, "laguf.RDS", sep = "_")
 #}
-#
+
 #saveRDS(lag_uf, file.path(output_dir, output_file))
 
 
@@ -211,21 +213,25 @@ cells <- list()
 
 for(n in c(low_sd, high_sd)) {
   
-  growth <- lag_clim[[n]]$recent
-  reproduction <- lag_clim[[n]]$lagged
+  env_U <- lag_clim[[n]]$recent
+  env_F <- lag_clim[[n]]$lagged
   
-n_it = length(growth)
-env <- data.frame(growth = growth,
-                  reproduction = reproduction)
-env <- env[complete.cases(env), ]
-env <- split(env, seq(nrow(env)))
-### Get all mpm's
-mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction, clim_sd = sd(growth, na.rm = T), 
-                                    sig.strength = sig.strength))
+n_it = length(env_U)
+  
+  env <- list(U_clim = env_U,
+              F_clim = env_F,
+              clim_sd = c(0.231, 2)[n],
+              sig.strength = 1)
+  
+  ### Get all mpm's
+  mats <- pmap(env, mpm) 
+  
+  
+  mats <- data.frame(lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
+                   clim_sd = c(0.231, 2)[n],
+                   clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
+                   sig.strength = 1)
 
-mats = data.frame(t(lapply(mats, as.vector) %>% bind_rows))
-
-mats$sd <- df$clim_sd[n]
 
 cells <- append(cells,
                 mats)
