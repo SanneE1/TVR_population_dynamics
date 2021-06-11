@@ -191,7 +191,7 @@ mpm <- function(U_clim, F_clim, sig.strength = 1, clim_sd) {
  #                "Fmatrix" = lag_f,
  #                "None" = lag_n)
   
-#output_dir <- args[2]
+output_dir <- args[2]
 
 #n_pop = length(unique(species$MatrixPopulation[which(species$SpeciesAuthor == i)]))
 
@@ -211,12 +211,12 @@ high_sd <- sample(which(round(df$clim_sd, digits = 3) == 2), 1)
 
 cells <- list()
 
-for(n in c(low_sd, high_sd)) {
+for(n in c(1,2)) {
   
   env_U <- lag_clim[[n]]$recent
   env_F <- lag_clim[[n]]$lagged
   
-n_it = length(env_U)
+  n_it = length(env_U)
   
   env <- list(U_clim = env_U,
               F_clim = env_F,
@@ -227,13 +227,16 @@ n_it = length(env_U)
   mats <- pmap(env, mpm) 
   
   
-  mats = sapply(mats, FUN = as.vector, USE.NAMES = T) %>% t %>% as.data.frame()
+  mats <- sapply(mats, FUN = as.vector, USE.NAMES = T) %>% t %>% as.data.frame()
+  
 
 
 cells <- append(cells,
-                mats)
+                list(mats))
 
 }
+
+names(cells) <- c('low', 'high')
 
 if(is.na(j)) {
   saveRDS(cells, file.path(output_dir, paste0(i, "_cell_values_HnL.RDS")))
