@@ -227,10 +227,7 @@ n_it = length(env_U)
   mats <- pmap(env, mpm) 
   
   
-  mats <- data.frame(lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
-                   clim_sd = c(0.231, 2)[n],
-                   clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
-                   sig.strength = 1)
+  mats = sapply(mats, FUN = as.vector, USE.NAMES = T) %>% t %>% as.data.frame()
 
 
 cells <- append(cells,
