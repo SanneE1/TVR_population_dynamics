@@ -28,10 +28,6 @@ source_lines <- function(file, lines){
   source(textConnection(readLines(file)[lines]))
 }
 
-### Get create_seq(), st.lamb(), n_it and set up parallel. Source lines from 01 folder
-print("Getting create_seq(), st.lamb(), n_it and set up parallel")
-source_lines(source_file, c(24:55, 109:147))
-
 ### Create mpm function with +P (s&g) and - F
 mpm <- function(survival, growth, reproduction,
                 clim_sd, sig.strength) {
@@ -81,6 +77,10 @@ mpm <- function(survival, growth, reproduction,
 }
 
 ## Run simulations ----------------------------------------
+
+# Get create_seq(), st.lamb(), n_it and set up parallel. Source lines from 01 folder
+print("Getting create_seq(), st.lamb(), n_it and set up parallel")
+source_lines(source_file, c(24:55, 109:147))
 
 # Create climate sequences
 print("creating temporal sequences")

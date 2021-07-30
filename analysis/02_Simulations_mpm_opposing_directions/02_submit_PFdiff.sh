@@ -11,7 +11,7 @@
 
 #Resources
 # max running time
-#SBATCH -t 15
+#SBATCH -t 30:00:00
 
 # memory per core (hard limit)
 #SBATCH --mem-per-cpu=4G
@@ -32,3 +32,4 @@ Rscript "$HOME"/lagged_buffering/analysis/02_Simulations_mpm_opposing_directions
 "$sigstrength" \
 "$sourcefile" \
 "$OUTPUT_PATH"
+

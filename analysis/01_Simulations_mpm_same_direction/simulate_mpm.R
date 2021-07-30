@@ -157,7 +157,7 @@ auto <- parLapply(cl = cl,
                                       sig.strength = i)
 )
 
-str(auto)
+print("done w/ auto")
 
 saveRDS(auto, file.path(output_dir, paste("mpm_", i, "_auto.RDS", sep = "")))
 
@@ -196,7 +196,7 @@ cov <- parLapply(cl = cl,
                                       error=function(err) NA)
 )
 
-str(cov)
+print("done w/ cov")
 
 saveRDS(cov, file.path(output_dir, paste("mpm_", i, "_cov.RDS", sep = "")))
 
@@ -244,7 +244,7 @@ lag_n <- parLapply(cl = cl,
 
 lag <- list("growth" = lag_g, "survival" = lag_s, "none" = lag_n)
 
-str(lag)
+print("done w/ s/g sim")
 
 saveRDS(lag, file.path(output_dir, paste("mpm_", i, "_lag.RDS", sep = "")))
 
@@ -284,7 +284,7 @@ lag_n2 <- parLapply(cl = cl,
 
 lag_fp <- list("Umatrix" = lag_p, "Fmatrix" = lag_f, "none" = lag_n2)
 
-str(lag_fp)
+print("done w/ UF sim")
 
 saveRDS(lag_fp, file.path(output_dir, paste("mpm_", i, "_lagfp.RDS", sep = "")))
 
