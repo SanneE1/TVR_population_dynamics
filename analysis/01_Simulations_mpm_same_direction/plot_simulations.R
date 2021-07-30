@@ -22,69 +22,73 @@ sig.strength <- regmatches(list.files(location, pattern = "auto.RDS"),
 ##  -------------------------------------
 ##  lambda summary plot
 ##  -------------------------------------
+label_auto <- c(
+  "0.9" = "0.9 autocorrelation",
+  "0" = "0 autocorrelation",
+  "-0.9" = "-0.9 autocorrelation"
+)
 
-sum_plot <- function(n, save = T){
-  
-  ## I tried using pmap and the object lists, but that gave:
-  # "no applicable method for 'mutate_' applied to an object of class "list" " 
-  # couldn't figured it out, and this way works too, but at some point I should get more familiar with pmap....
-  a <- auto[[n]]
-  c <- cov[[n]]
-  p <- lag[[n]]
-  f <- lagpf[[n]]
-  ss <- sig.strength[[n]]
+sum_plot <- function(a, c, p, f, ss){
   
   ### Climate variables
   clim_sd <- rep(seq(from = 0.01, to = 2, length.out = 10), 90)
   clim_corr <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
   ## Plot
   auto_p <- ggplot(a) + geom_smooth(aes(x = clim_sd, y = lambda, linetype = as.factor(clim_auto)), colour = "grey30") + 
-    labs(linetype = "Climate \nautocorrelation", title = "Autocorrelation \nin growth") +
-  xlab("Climate standard deviation") + ylab("log lambda")
+    labs(linetype = "Climate \nautocorrelation", title = "Autocorrelation in growth") +
+    xlab("Climate standard deviation") + ylab("log lambda") +
+    theme_minimal() +
+    theme(legend.position = "bottom")
   
   cov_df <- c %>% mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))
   cov_p <- ggplot(cov_df) + geom_smooth(aes(x = clim_sd, y = lambda, linetype = as.factor(auto_cat)), colour = "grey30") + 
     labs(linetype = "Climate \ncovariance", title = "Covariance in \nsurvival & growth") +
-  xlab("Climate standard deviation") + ylab("log lambda")
+    xlab("Climate standard deviation") + ylab("log lambda") +
+    theme_minimal() +
+    theme(legend.position = "bottom")
   
   lag_df <- lapply(p, function(x) x %>% mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))) %>%
     bind_rows(., .id = "type")
   
-  lag_p <- ggplot(lag_df) + geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type))) + 
+  lag_p <- ggplot(lag_df) + geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)), se = F) + 
     geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)), position = position_dodge(width = 0.1)) + 
     labs(colour = "Lag type", title = "Lagged climate in growth or survival") +
     xlab("Climate standard deviation") + ylab("log lambda") +
     facet_grid(cols = vars(auto_cat), labeller = as_labeller(c("-0.9" = "Autocorrelation = -0.9",
                                                                "0" = "Autocorrelation = 0",
-                                                               "0.9" = "Autocorrelation = 0.9")))
+                                                               "0.9" = "Autocorrelation = 0.9"))) +
+    theme_minimal() +
+    theme(legend.position = "bottom")
   
   lagpf_df <- lapply(f, function(x) x %>% mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))) %>%
-    bind_rows(., .id = "type")
+    bind_rows(., .id = "type") %>% mutate(type = factor(type, levels = c("none", "Umatrix", "Fmatrix")))
   
-  lagpf_p <- ggplot(lagpf_df) + geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
-    geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)), position = position_dodge(width = 0.1))+ 
-    labs(colour = "Lag type", title = "Lagged climate in U or F matrix") + 
-    xlab("Climate standard deviation") + ylab("log lambda") +
-    facet_grid(cols = vars(auto_cat), labeller = as_labeller(c("-0.9" = "Autocorrelation = -0.9",
-                                                               "0" = "Autocorrelation = 0",
-                                                               "0.9" = "Autocorrelation = 0.9"))) + 
-    scale_colour_manual(values = c("#00AFBB", "#E7B800", "#FC4E07")) 
+  lagpf_p <- ggplot(lagpf_df) + 
+    geom_smooth(aes(x = clim_sd, y = lambda, colour = type), se = F)+ 
+    geom_point(aes(x = clim_sd, y = lambda, colour = type), position = position_dodge(width = 0.1))+ 
+    labs(subtitle = "Same directional response of submatrices to climate driver") +
+    ylab("stochastic log lambda") + xlab("SD of environmental sequence") + 
+    facet_grid(cols = vars(auto_cat), labeller = labeller(auto_cat = label_auto)) + 
+    scale_colour_manual(name = "Simulation type",
+                        values = c("Umatrix" = "#E69F00", "none" = "#0072B2", "Fmatrix" = "#CC79A7"),
+                        labels = c("none" = "control", "Umatrix" = "U_MCD", "Fmatrix" = "F_MCD")) + theme_minimal() +
+    theme(legend.position = "bottom")
   
-  plot_AC <- auto_p + cov_p + plot_layout(guides = "collect") + plot_annotation(title = paste("Climate signal strenth =", ss))
-  plot_lag <-  (lag_p / lagpf_p) + plot_layout(guides = "collect") + plot_annotation(title = paste("Climate signal strenth =", ss))
+  plot_AC <- auto_p + cov_p + plot_annotation(title = paste("Climate signal strenth =", ss))
+  plot_lag <-  (lag_p / lagpf_p) + plot_annotation(title = paste("Climate signal strenth =", ss))
   
   
   lagf <- lagpf_df %>% filter(type != "Fmatrix") %>%
     ggplot(.) + 
-    geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
+    geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)), se = F)+ 
     geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)), position = position_dodge(width = 0.1))+ 
-    labs(colour = "Lag type", title = "Lagged climate in U") + 
-    xlab("Climate standard deviation") + ylab("log lambda") +
-    facet_grid(cols = vars(auto_cat), labeller = as_labeller(c("-0.9" = "Autocorrelation = -0.9",
-                                                               "0" = "Autocorrelation = 0",
-                                                               "0.9" = "Autocorrelation = 0.9"))) + 
-    scale_colour_manual(values = c("#E7B800", "#FC4E07")) 
-  
+    labs(subtitle = "Same directional response of submatrices to climate driver") +
+    ylab("stochastic log lambda") + xlab("SD of environmental sequence") + 
+    facet_grid(cols = vars(auto_cat), labeller = labeller(auto_cat = label_auto)) + 
+    scale_colour_manual(name = "Simulation type",
+                        values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
+                        labels = c("none" = "control", "Umatrix" = "MCD")) + theme_minimal() +
+    theme(legend.position = "bottom")
   
   ggsave(filename = file.path(output_dir, "lambda_plots", paste0("auto_cov_plot_", ss, ".png")), 
            plot_AC, width = 8.22, height = 5.53, units = "in")
@@ -104,7 +108,11 @@ sum_plot <- function(n, save = T){
       geom_hline(aes(yintercept = 0)) + 
     ylab("Proportional difference in log lambda") +
     xlab("Climate standard deviation") + 
-    labs(fill = "Climate \nautocorrelation", title = "Relative difference", subtitle = "between control and simulations with lag in U-matrix")
+    labs(fill = "Climate \nautocorrelation", title = "Relative difference", 
+         subtitle = "between control and simulations with lag in U-matrix") + 
+    theme_minimal() +
+    theme(legend.position = "bottom")
+    
   
   ggsave(filename = file.path(output_dir, "lambda_plots", paste0("UF_relative_diff_", ss, ".png")),
          diff, width = 8.22, height = 5.53, units = "in")
@@ -118,12 +126,16 @@ cov <- lapply(cov_f, function(x) lapply(x, function(y) y$df) %>% bind_rows)
 lag <- lapply(lag_f, function(x) lapply(x, function(y) lapply(y, function(z) z$df) %>% bind_rows))
 lagpf <- lapply(lagpf_f, function(x) lapply(x, function(y) lapply(y, function(z) z[[1]]) %>% Filter(Negate(anyNA), .) %>% bind_rows))
 
-m <- lapply(as.list(c(1:4)), sum_plot)
-
+pmap(list(a = auto, 
+          c = cov, 
+          p = lag, 
+          f = lagpf, 
+          ss = sig.strength), 
+     sum_plot)
 
 
 ##  -------------------------------------
-##  Plot a lambda time sequence 
+##  Plot a lambda time sequence of simulation with i = 0.5 (50% of temporal variance explained by climate driver)
 ##  -------------------------------------
 l_seq0 <- data.frame( Umatrix = lapply(as.list(as.data.frame(t(lagpf_f[[3]]$Umatrix[[20]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
                      none = lapply(as.list(as.data.frame(t(lagpf_f[[3]]$none[[20]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
@@ -142,58 +154,91 @@ l_seqpos <- data.frame( Umatrix = lapply(as.list(as.data.frame(t(lagpf_f[[3]]$Um
 
 ### zoom in on 35 years
 time_series0 <- ggplot(l_seq0) + 
-  geom_line(aes(y = lambda, x = time, colour = type)) + 
-  coord_cartesian(xlim = c(1095,1130)) + ylab("log lambda") + 
-  labs(subtitle = "0 autocorrelation, standard deviation = 2")
+  geom_line(aes(y = lambda, x = time, colour = type), show.legend = F) + 
+  xlim(1095,1130) + ylim(c(-7.5,2)) + ylab("log lambda") + 
+  labs(subtitle = "0 autocorrelation") + 
+  scale_colour_manual(values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
+                      labels = c("none" = "control", "Umatrix" = "MCD"))
+
 
 time_seriesneg <- ggplot(l_seqneg) + 
-  geom_line(aes(y = lambda, x = time, colour = type)) + 
-  coord_cartesian(xlim = c(1095,1130)) + ylab("log lambda") + 
-  labs(subtitle = "-0.9 autocorrelation, standard deviation = 2")
+  geom_line(aes(y = lambda, x = time, colour = type), show.legend = F) + 
+  xlim(1095,1130) + ylim(c(-7.5,2)) + ylab("log lambda") + 
+  labs(subtitle = "-0.9 autocorrelation") + 
+  scale_colour_manual(values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
+                      label = c("Umatrix" = "MCD", "none" = "control"))
 
 time_seriespos <- ggplot(l_seqpos) + 
-  geom_line(aes(y = lambda, x = time, colour = type)) + 
-  coord_cartesian(xlim = c(1095,1130)) + ylab("log lambda") + 
-  labs(subtitle = "0.9 autocorrelation, standard deviation = 2")
+  geom_line(aes(y = lambda, x = time, colour = type), show.legend = F) + 
+  xlim(1095,1130) + ylim(c(-7.5,2)) + ylab("log lambda") + 
+  labs(subtitle = "0.9 autocorrelation") + 
+  scale_colour_manual(values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
+                      label = c("none" = "control", "Umatrix" = "MCD"))
 
-ggsave(filename = file.path(output_dir, "lambda_timeseries", "timeseries_0.tiff"), time_series0,width = 9.22, height = 6.5)
-ggsave(filename = file.path(output_dir, "lambda_timeseries", "timeseries_neg.tiff"), time_seriesneg, width = 9.22, height = 6.5)
-ggsave(filename = file.path(output_dir, "lambda_timeseries", "timeseries_pos.tiff"), time_seriespos, width = 9.22, height = 6.5)
-
-time_series <- time_seriespos + time_series0 + time_seriesneg + plot_layout(nrow = 3, guides = "collect") + 
-  plot_annotation(title = "lambda time series")
-
-ggsave(filename = file.path(output_dir, "lambda_timeseries", "summary_timeseries.tiff"), 
-       plot = time_series, width = 9.22, height = 6.5)
+# ggsave(filename = file.path(output_dir, "lambda_timeseries", "timeseries_0.tiff"), time_series0,width = 9.22, height = 6.5)
+# ggsave(filename = file.path(output_dir, "lambda_timeseries", "timeseries_neg.tiff"), time_seriesneg, width = 9.22, height = 6.5)
+# ggsave(filename = file.path(output_dir, "lambda_timeseries", "timeseries_pos.tiff"), time_seriespos, width = 9.22, height = 6.5)
+# 
+# time_series <- time_seriespos + time_series0 + time_seriesneg + plot_layout(nrow = 3, guides = "collect") + 
+#   plot_annotation(title = "lambda time series")
+# 
+# ggsave(filename = file.path(output_dir, "lambda_timeseries", "summary_timeseries.tiff"), 
+#        plot = time_series, width = 9.22, height = 6.5)
 
 int_ann_0 <- l_seq0 %>% 
   group_by(type) %>% 
-  arrange(time) %>% 
-  mutate(diff = (lambda %>% exp) - (lag(lambda, default = first(lambda)) %>% exp)) %>%
+  arrange(time) %>%
+  mutate(diff = (lambda %>% exp) - (lag(lambda, default = first(lambda)) %>% exp),
+         type = factor(type, levels = c("Umatrix", "none"))) %>%
   ggplot(.) +
   geom_density(aes(x = diff, fill = type, colour = type), alpha = 0.5) +
+  scale_fill_manual(name = "Simulation", label = c("none" = "control", "Umatrix" = "MCD"), 
+                    values = c("Umatrix" = "#E69F00", "none" = "#0072B2")) +  
+  scale_colour_manual(name = "Simulation", label = c("none" = "control", "Umatrix" = "MCD"), 
+                      values = c("Umatrix" = "#E69F00", "none" = "#0072B2")) +
   xlab("interannual difference") + coord_cartesian(c(-3, 3))
 
 int_ann_neg <- l_seqneg %>% 
   group_by(type) %>% 
   arrange(time) %>% 
-  mutate(diff = (lambda %>% exp) - (lag(lambda, default = first(lambda)) %>% exp)) %>%
+  mutate(diff = (lambda %>% exp) - (lag(lambda, default = first(lambda)) %>% exp),
+         type = factor(type, levels = c("Umatrix", "none"))) %>%
   ggplot(.) +
   geom_density(aes(x = diff, fill = type, colour = type), alpha = 0.5)  +
+  scale_fill_manual(name = "Simulation", label = c("none" = "control", "Umatrix" = "MCD"), 
+                    values = c("Umatrix" = "#E69F00", "none" = "#0072B2")) +  
+  scale_colour_manual(name = "Simulation", label = c("none" = "control", "Umatrix" = "MCD"), 
+                      values = c("Umatrix" = "#E69F00", "none" = "#0072B2")) +
   xlab("interannual difference") + coord_cartesian(c(-3, 3))
 
 int_ann_pos <- l_seqpos %>% 
   group_by(type) %>% 
   arrange(time) %>% 
-  mutate(diff = (lambda %>% exp) - (lag(lambda, default = first(lambda)) %>% exp)) %>%
+  mutate(diff = (lambda %>% exp) - (lag(lambda, default = first(lambda)) %>% exp),
+         type = factor(type, levels = c("Umatrix", "none"))) %>%
   ggplot(.) +
   geom_density(aes(x = diff, fill = type, colour = type), alpha = 0.5) +
+  scale_fill_manual(name = "Simulation", label = c("none" = "control", "Umatrix" = "MCD"), 
+                    values = c("Umatrix" = "#E69F00", "none" = "#0072B2")) +  
+  scale_colour_manual(name = "Simulation", label = c("none" = "control", "Umatrix" = "MCD"), 
+                      values = c("Umatrix" = "#E69F00", "none" = "#0072B2")) +
   xlab("interannual difference") + coord_cartesian(c(-3, 3))
 
-time_diff <-  (time_seriespos + time_series0 + time_seriesneg) * ylim(c(-7.5,2)) + 
-  int_ann_pos + int_ann_0 + int_ann_neg + 
-  plot_layout(nrow = 3, guides = "collect", byrow = F, widths = c(4,1)) + 
-  plot_annotation(title = "lambda over time") 
+
+
+a <- wrap_plots((time_seriespos / time_series0 / time_seriesneg), (int_ann_pos / int_ann_0 / int_ann_neg), 
+           byrow = F, 
+           ncol = 2, 
+           widths = c(3,1), 
+           guides = "collect") & theme(legend.position = "bottom") & theme_minimal() 
+
+
+a[[1]] <- a[[1]] + plot_layout(tag_level = "new")
+a[[2]] <- a[[2]] + plot_layout(tag_level = "new")
+
+
+time_diff <- a + plot_annotation(tag_levels = c('A', 'i'), tag_sep = '.') & theme(legend.position = "bottom")
+
 
 ggsave(filename = file.path(output_dir, "lambda_timeseries", "timeseries&diff.tiff"), 
        plot = time_diff, width = 9.22, height = 6.5)
