@@ -3,7 +3,6 @@ rm(list=ls())
 library(dplyr)
 library(tidyr)
 library(popbio)
-library(pbapply)
 library(parallel)
 library(ggplot2)
 library(faux)
@@ -12,10 +11,15 @@ library(patchwork)
 
 set.seed(2)
 
-output_dir <- "results/02_Simulations_mpm_opposing_directions/pos_P_neg_F/"
+args = commandArgs(trailingOnly = T)
 
-#Set signal strength to 0.5
-for(i in c(0.05, 0.25, 0.5, 1)) {
+if(length(args)!=3) {  ## submit script provides two more arguments (output and source location)
+stop("Provide (only) signal strength for the analysis", call.=F)
+}
+
+i = as.numeric(args[1])
+source_file <- args[2]
+output_dir <- args[3]
 
 ### Create line sourcing to
 source_lines <- function(file, lines){
@@ -23,7 +27,7 @@ source_lines <- function(file, lines){
 }
 
 ### Get necesary functions. Source lines from 01 folder
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(14:35, 107:134))
+source_lines(source_file, c(14:35, 107:134))
 
 ### Create mpm function with +P (s&g) and - F
 mpm <- function(survival, growth, reproduction,
@@ -76,13 +80,13 @@ mpm <- function(survival, growth, reproduction,
 ## Run simulations ----------------------------------------
 
 # Set up parallel
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(139:152))
+source_lines(source_file, c(139:152))
 
 # Create climate sequences
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(196:200))
+source_lines(source_file, c(196:200))
 
 # Run simulations for U and F matrix
-source_lines("analysis/01_Simulations_mpm_same_direction/simulate_mpm.R", c(238:277))
+source_lines(source_file, c(238:277))
 
 
 # Plot results ----------------------------------------
@@ -151,4 +155,3 @@ main_plot <- (plot_pos / lagpf_p) +
 ggsave(filename = file.path(output_dir, paste0("lag_plot_PF_", i, ".png")), 
        main_plot, width = 7, height = 5.5)
 
-}

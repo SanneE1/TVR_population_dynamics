@@ -2,14 +2,21 @@ rm(list=ls())
 library(dplyr)
 library(tidyr)
 library(popbio)
-library(pbapply)
 library(parallel)
 library(ggplot2)
 library(faux)
 library(boot)
 set.seed(2)
 
-output_dir <- "results/01_Simulations_mpm_same_directions/rds/"
+args = commandArgs(trailingOnly = T)
+
+if(length(args)!=2) {
+stop("Provide (only) signal strength for the analysis", call.=F)
+}
+
+output_dir <- args[2]
+
+print(paste0("output dir = ", output_dir))
 
 # Create function that creates environmental sequence ------------------------------------------------------------------------------------
 ### creates a sequence of climate anomalies whith a specified standard deviation and autocorrelation.
@@ -110,7 +117,7 @@ st.lamb <- function(env_surv, env_growth, env_reproduction,
   mats <- pmap(env, mpm) %>% Filter(Negate(anyNA), .)
   
   
-  df <- data.frame(lambda = stoch.growth.rate(mats, maxt = n_it)$sim,
+  df <- data.frame(lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
                    clim_sd = clim_sd,
                    clim_auto = clim_auto)
   
@@ -121,13 +128,13 @@ st.lamb <- function(env_surv, env_growth, env_reproduction,
 
 n_it = 50000
 
-for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code for different climate effect strength without manual changes
+# for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code for different climate effect strength without manual changes
+i = as.numeric(args[1])
   
-  print(i)
+print(i)
   
   # Set up parallel runs
-  no_cores <- detectCores()
-  cl <- makeCluster(no_cores - 2)
+  cl <- makeForkCluster(outfile = "")
   ## export libraries to workers
   clusterEvalQ(cl, c(library(popbio), library(dplyr), library(purrr)))
   
@@ -140,7 +147,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
   clusterExport(cl, c("i", "create_seq", "inv.logit", "mpm", "st.lamb", "clim_auto", "clim_sd", "n_it"))
   
   
-  auto <- pblapply(cl = cl,
+  auto <- parLapply(cl = cl,
                    as.list(c(1:900)),
                    function(x) st.lamb(env_surv = create_seq(n_it = n_it, clim_sd[x], clim_auto[x], 0)[["recent"]],
                                        env_growth = create_seq(n_it = n_it, clim_sd[x], clim_auto[x], 0)[["recent"]],
@@ -151,6 +158,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                                        sig.strength = i)
   )
   
+  str(auto)
   
   saveRDS(auto, file.path(output_dir, paste("mpm_", i, "_auto.RDS", sep = "")))
   
@@ -177,7 +185,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
   
   clusterExport(cl, c("clim"))
   
-  cov <- pblapply(cl = cl,
+  cov <- parLapply(cl = cl,
                   clim,
                   function(x) tryCatch(st.lamb(env_surv = x[["surv"]],
                                       env_growth = x[["growth"]],
@@ -189,6 +197,8 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                                       error=function(err) NA)
   )
   
+  str(cov)
+
   saveRDS(cov, file.path(output_dir, paste("mpm_", i, "_cov.RDS", sep = "")))
   
   
@@ -198,7 +208,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
   
   clusterExport(cl, c("lag_clim"))
   
-  lag_g <- pblapply(cl = cl,
+  lag_g <- parLapply(cl = cl,
                     lag_clim,
                     function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
                                                  env_growth = x[["lagged"]],
@@ -210,7 +220,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                                          error=function(err) NA)
   )
 
-  lag_s <- pblapply(cl = cl,
+  lag_s <- parLapply(cl = cl,
                     lag_clim,
                     function(x) tryCatch(st.lamb(env_surv = x[["lagged"]],
                                                  env_growth = x[["recent"]],
@@ -222,7 +232,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                                          error=function(err) NA)
   )
 
-  lag_n <- pblapply(cl = cl,
+  lag_n <- parLapply(cl = cl,
                     lag_clim,
                     function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
                                                  env_growth = x[["recent"]],
@@ -236,11 +246,13 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
 
   lag <- list("growth" = lag_g, "survival" = lag_s, "none" = lag_n)
 
+  str(lag)
+
   saveRDS(lag, file.path(output_dir, paste("mpm_", i, "_lag.RDS", sep = "")))
   
   #### Lagged effect between U & F matrices
   
-  lag_p <- pblapply(cl = cl,
+  lag_p <- parLapply(cl = cl,
                     lag_clim,
                     function(x) tryCatch(st.lamb(env_surv = x[["lagged"]],
                                                  env_growth = x[["lagged"]],
@@ -251,7 +263,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                                          error=function(err) NA)
   )
   
-  lag_f <- pblapply(cl = cl,
+  lag_f <- parLapply(cl = cl,
                     lag_clim,
                     function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
                                                  env_growth = x[["recent"]],
@@ -262,7 +274,7 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
                                          error=function(err) NA)
   )
   
-  lag_n2 <- pblapply(cl = cl,
+  lag_n2 <- parLapply(cl = cl,
                      lag_clim,
                      function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
                                                   env_growth = x[["recent"]],
@@ -275,8 +287,10 @@ for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code fo
   
   lag_fp <- list("Umatrix" = lag_p, "Fmatrix" = lag_f, "none" = lag_n2)
   
+  str(lag_fp)
+
   saveRDS(lag_fp, file.path(output_dir, paste("mpm_", i, "_lagfp.RDS", sep = "")))
   
   stopCluster(cl)
   
-}
+
