@@ -1,6 +1,0 @@
-lines=$(wc -l /data/lagged/species_authors.csv | cut -d' ' -f1)
-
-# with CSV header
-#      sbatch -a 1-$(( lines - 1 )) ...
-
-sbatch -t 10:00:00 -a 1-$((lines-1)) analysis/06_COMPADRE_studies/06_submit_simulation.sh
