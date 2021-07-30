@@ -3,6 +3,7 @@ library(ggplot2)
 library(pbapply)
 library(popbio)
 library(boot)
+library(parallel)
 
 # ---------------------------------------------------------------
 # load COMPADRE
@@ -125,20 +126,23 @@ lag_clim <- lapply(as.list(c(1:900)), function(x)
 
 # Stocastic mpm -----------------------------------
 
-st.lamb <- function(growth, reproduction, clim_auto, sig.strength){
+st.lamb <- function(env_U, env_F, 
+                    clim_sd, clim_auto, sig.strength) {
   
-  n_it = length(growth)
+  n_it = length(env_U)
   
-  env <- data.frame(growth = growth,
-                    reproduction = reproduction) %>% filter(complete.cases(.))
-  env <- split(env, seq(nrow(env))) 
+  env <- list(U_clim = env_U,
+              F_clim = env_F,
+              clim_sd = rep(clim_sd, n_it),
+              sig.strength = rep(sig.strength, n_it))
   
   ### Get all mpm's
-  mats <- lapply(env, function(x) mpm(U_clim = x$growth, F_clim = x$reproduction, sig.strength = sig.strength))
+  mats <- pmap(env, mpm) 
+  
   
   df <- data.frame(lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
+                   clim_sd = clim_sd,
                    clim_auto = clim_auto,
-                   clim_sd = sd(growth, na.rm = T),
                    sig.strength = sig.strength)
   
   return(df)
@@ -154,7 +158,7 @@ for(sp in c(1:length(cell_values))) {
   Fcell_values <- cell_values[[sp]] %>% filter(., grepl("^F", cell))
   
   # create species specific mpm
-  mpm <- function(U_clim, F_clim, sig.strength) {
+  mpm <- function(U_clim, F_clim, sig.strength, clim_sd) {
     
     devU <- U_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
       rnorm(length(Ucell_values$mean), mean = 0, sd = clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
@@ -178,23 +182,49 @@ for(sp in c(1:length(cell_values))) {
     return(mpm)  
   }
   
-  plag_u <- pblapply(lag_clim, 
-                     function(x) st.lamb(growth = x$lagged,
-                                         reproduction = x$recent,
+  # Set up parallel runs
+  no_cores <- detectCores()
+  cl <- makeCluster(no_cores - 2)
+  ## export libraries to workers
+  clusterEvalQ(cl, c(library(popbio), library(tidyverse), library(purrr), library(boot)))
+  clusterExport(cl, c("st.lamb", "mpm", "lag_clim",
+                      "Ucell_values", "Fcell_values"))
+  
+  
+  plag_u <- pblapply(cl = cl,
+                     lag_clim, 
+                     function(x) st.lamb(env_U = x$lagged,
+                                         env_F = x$recent,
+                                         clim_sd = sd(x$recent, na.rm = T),
                                          clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                          sig.strength = 1)
   ) 
   
-  plag_n <- pblapply(lag_clim, 
-                     function(x) st.lamb(growth = x$recent,
-                                         reproduction = x$recent,
+  plag_n <- pblapply(cl = cl,
+                     lag_clim, 
+                     function(x) st.lamb(env_U = x$recent,
+                                         env_F = x$recent,
+                                         clim_sd = sd(x$recent, na.rm = T),
                                          clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                          sig.strength = 1)
   ) 
+  stopCluster(cl)
 
   data <- rbind(plag_u %>% bind_rows %>% mutate(type = "Umatrix"),
                 plag_n %>% bind_rows %>% mutate(type = "None")) %>% 
     mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))
+  
+  
+  origin <- readRDS(list.files(path = file.path("results", "06_COMPADRE_studies", "rds"), 
+                     pattern = paste("mpm", df$SpeciesAuthor[sp], df$MatrixPopulation[sp], sep = "_"), 
+                     full.names = T)) %>%
+    lapply(., function(x) lapply(x, function(y) y %>% 
+                                                mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))
+                                              ) %>% bind_rows) %>%
+    bind_rows(., .id = "type")
+  
+  plot_df <- rbind(collapsed = data, 
+        original = origin)
   
   lagpf_p <- ggplot(data) + geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
     geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
