@@ -24,7 +24,7 @@ mkdir -p "$OUTPUT_PATH"
 module load foss/2019b R/4.0.0-2
 
 sigstrength=$1
-sourcefile="$HOME"/lagged_buffering/analysis/01_Simulations_mpm_same_direction/simulate_mpm.R
+sourcefile="$HOME/lagged_buffering/analysis/01_Simulations_mpm_same_direction/simulate_mpm.R"
 
 export MC_CORES=${SLURM_CPUS_PER_TASK:-1}
  

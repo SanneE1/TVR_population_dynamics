@@ -11,12 +11,18 @@ set.seed(2)
 args = commandArgs(trailingOnly = T)
 
 if(length(args)!=2) {
-stop("Provide (only) signal strength for the analysis", call.=F)
+  stop("Provide (only) signal strength for the analysis", call.=F)
 }
 
+
+i = as.numeric(args[1])
 output_dir <- args[2]
 
-print(paste0("output dir = ", output_dir))
+print(paste("sig.strength =", i))
+print(paste("output dir =", output_dir))
+
+n_it = 50000
+print(paste("#iterations =", n_it))
 
 # Create function that creates environmental sequence ------------------------------------------------------------------------------------
 ### creates a sequence of climate anomalies whith a specified standard deviation and autocorrelation.
@@ -126,171 +132,162 @@ st.lamb <- function(env_surv, env_growth, env_reproduction,
                 `colnames<-`(c("1,1", "2,1", "1,2", "2,2"))))
 }
 
-n_it = 50000
+# Set up parallel runs
+cl <- makeForkCluster(outfile = "")
+## export libraries to workers
+suppressMessages(clusterEvalQ(cl, c(library(popbio), library(dplyr), library(purrr))))
 
-# for(i in c(1, 0.5, 0.25, 0.05)) {   #### i means that I can run the same code for different climate effect strength without manual changes
-i = as.numeric(args[1])
-  
-print(i)
-  
-  # Set up parallel runs
-  cl <- makeForkCluster(outfile = "")
-  ## export libraries to workers
-  clusterEvalQ(cl, c(library(popbio), library(dplyr), library(purrr)))
-  
-  
-  ### autocorrelation in growth
-  clim_sd <- rep(seq(from = 0.01, to = 2, length.out = 10), 90)
-  clim_auto <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
-  
-  ## export objects to workers
-  clusterExport(cl, c("i", "create_seq", "inv.logit", "mpm", "st.lamb", "clim_auto", "clim_sd", "n_it"))
-  
-  
-  auto <- parLapply(cl = cl,
-                   as.list(c(1:900)),
-                   function(x) st.lamb(env_surv = create_seq(n_it = n_it, clim_sd[x], clim_auto[x], 0)[["recent"]],
-                                       env_growth = create_seq(n_it = n_it, clim_sd[x], clim_auto[x], 0)[["recent"]],
-                                       env_reproduction = data.frame(clim = rep(NA, n_it),
-                                                                     ran = rep(NA, n_it)),
-                                       clim_sd = clim_sd[x],
-                                       clim_auto = clim_auto[x],
-                                       sig.strength = i)
-  )
-  
-  str(auto)
-  
-  saveRDS(auto, file.path(output_dir, paste("mpm_", i, "_auto.RDS", sep = "")))
-  
-  
-  
-  ### Covariance all U vr
-  cov_clim <- function(x) {
-    clim = rnorm_multi(n = n_it,
-                       vars = 2,
-                       mu = c(0,0),
-                       sd = clim_sd[x],
-                       r = clim_auto[x],
-                       varnames = c("surv", "growth"))
-    ran = rnorm(n = n_it, mean = 0, sd = clim_sd[x])
-    
-    df <- list(surv = data.frame(clim = clim$surv,
-                                 ran = ran),
-               growth = data.frame(clim = clim$growth,
-                                   ran = ran))
-    return(df)
-  }
-  
-  clim <- lapply(as.list(c(1:900)), cov_clim)
-  
-  clusterExport(cl, c("clim"))
-  
-  cov <- parLapply(cl = cl,
-                  clim,
-                  function(x) tryCatch(st.lamb(env_surv = x[["surv"]],
-                                      env_growth = x[["growth"]],
+
+### autocorrelation in growth
+clim_sd <- rep(seq(from = 0.01, to = 2, length.out = 10), 90)
+clim_auto <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
+
+## export objects to workers
+suppressMessages(clusterExport(cl, c("i", "create_seq", "inv.logit", "mpm", "st.lamb", "clim_auto", "clim_sd", "n_it")))
+
+
+auto <- parLapply(cl = cl,
+                  as.list(c(1:900)),
+                  function(x) st.lamb(env_surv = create_seq(n_it = n_it, clim_sd[x], clim_auto[x], 0)[["recent"]],
+                                      env_growth = create_seq(n_it = n_it, clim_sd[x], clim_auto[x], 0)[["recent"]],
                                       env_reproduction = data.frame(clim = rep(NA, n_it),
                                                                     ran = rep(NA, n_it)),
-                                               clim_sd = sd(x[["surv"]]$clim),
-                                               clim_auto = cor(x[["surv"]]$clim, x[["growth"]]$clim),
-                                               sig.strength = i),
+                                      clim_sd = clim_sd[x],
+                                      clim_auto = clim_auto[x],
+                                      sig.strength = i)
+)
+
+str(auto)
+
+saveRDS(auto, file.path(output_dir, paste("mpm_", i, "_auto.RDS", sep = "")))
+
+
+
+### Covariance all U vr
+cov_clim <- function(x) {
+  clim = rnorm_multi(n = n_it,
+                     vars = 2,
+                     mu = c(0,0),
+                     sd = clim_sd[x],
+                     r = clim_auto[x],
+                     varnames = c("surv", "growth"))
+  ran = rnorm(n = n_it, mean = 0, sd = clim_sd[x])
+  
+  df <- list(surv = data.frame(clim = clim$surv,
+                               ran = ran),
+             growth = data.frame(clim = clim$growth,
+                                 ran = ran))
+  return(df)
+}
+
+clim <- lapply(as.list(c(1:900)), cov_clim)
+
+clusterExport(cl, c("clim"))
+
+cov <- parLapply(cl = cl,
+                 clim,
+                 function(x) tryCatch(st.lamb(env_surv = x[["surv"]],
+                                              env_growth = x[["growth"]],
+                                              env_reproduction = data.frame(clim = rep(NA, n_it),
+                                                                            ran = rep(NA, n_it)),
+                                              clim_sd = sd(x[["surv"]]$clim),
+                                              clim_auto = cor(x[["surv"]]$clim, x[["growth"]]$clim),
+                                              sig.strength = i),
                                       error=function(err) NA)
-  )
-  
-  str(cov)
+)
 
-  saveRDS(cov, file.path(output_dir, paste("mpm_", i, "_cov.RDS", sep = "")))
-  
-  
-  #### Lagged effect within U matrix
-  
-  lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(n_it, clim_sd = clim_sd[x], clim_auto = clim_auto[x], lag = 1))
-  
-  clusterExport(cl, c("lag_clim"))
-  
-  lag_g <- parLapply(cl = cl,
+str(cov)
+
+saveRDS(cov, file.path(output_dir, paste("mpm_", i, "_cov.RDS", sep = "")))
+
+
+#### Create main temporal sequences
+lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(n_it, clim_sd = clim_sd[x], clim_auto = clim_auto[x], lag = 1))
+suppressMessages(clusterExport(cl, c("lag_clim")))
+
+#### Lagged effect within U matrix
+lag_g <- parLapply(cl = cl,
+                   lag_clim,
+                   function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
+                                                env_growth = x[["lagged"]],
+                                                env_reproduction = data.frame(clim = rep(NA, n_it),
+                                                                              ran = rep(NA, n_it)),
+                                                clim_sd = sd(x[["recent"]]$clim, na.rm = T),
+                                                clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
+                                                sig.strength = i),
+                                        error=function(err) NA)
+)
+
+lag_s <- parLapply(cl = cl,
+                   lag_clim,
+                   function(x) tryCatch(st.lamb(env_surv = x[["lagged"]],
+                                                env_growth = x[["recent"]],
+                                                env_reproduction = data.frame(clim = rep(NA, n_it),
+                                                                              ran = rep(NA, n_it)),
+                                                clim_sd = sd(x[["recent"]]$clim, na.rm = T),
+                                                clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
+                                                sig.strength = i),
+                                        error=function(err) NA)
+)
+
+lag_n <- parLapply(cl = cl,
+                   lag_clim,
+                   function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
+                                                env_growth = x[["recent"]],
+                                                env_reproduction = data.frame(clim = rep(NA, n_it),
+                                                                              ran = rep(NA, n_it)),
+                                                clim_sd = sd(x[["recent"]]$clim, na.rm = T),
+                                                clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
+                                                sig.strength = i),
+                                        error=function(err) NA)
+)
+
+lag <- list("growth" = lag_g, "survival" = lag_s, "none" = lag_n)
+
+str(lag)
+
+saveRDS(lag, file.path(output_dir, paste("mpm_", i, "_lag.RDS", sep = "")))
+
+#### Lagged effect between U & F matrices
+lag_p <- parLapply(cl = cl,
+                   lag_clim,
+                   function(x) tryCatch(st.lamb(env_surv = x[["lagged"]],
+                                                env_growth = x[["lagged"]],
+                                                env_reproduction = x[["recent"]],
+                                                clim_sd = sd(x[["recent"]]$clim, na.rm = T),
+                                                clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
+                                                sig.strength = i),
+                                        error=function(err) NA)
+)
+
+lag_f <- parLapply(cl = cl,
+                   lag_clim,
+                   function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
+                                                env_growth = x[["recent"]],
+                                                env_reproduction = x[["lagged"]],
+                                                clim_sd = sd(x[["recent"]]$clim, na.rm = T),
+                                                clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
+                                                sig.strength = i),
+                                        error=function(err) NA)
+)
+
+lag_n2 <- parLapply(cl = cl,
                     lag_clim,
                     function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
-                                                 env_growth = x[["lagged"]],
-                                                 env_reproduction = data.frame(clim = rep(NA, n_it),
-                                                                               ran = rep(NA, n_it)),
-                                                 clim_sd = sd(x[["recent"]]$clim, na.rm = T),
-                                                 clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
-                                                 sig.strength = i),
-                                         error=function(err) NA)
-  )
-
-  lag_s <- parLapply(cl = cl,
-                    lag_clim,
-                    function(x) tryCatch(st.lamb(env_surv = x[["lagged"]],
                                                  env_growth = x[["recent"]],
-                                                 env_reproduction = data.frame(clim = rep(NA, n_it),
-                                                                                ran = rep(NA, n_it)),
-                                                 clim_sd = sd(x[["recent"]]$clim, na.rm = T),
-                                                 clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
-                                                 sig.strength = i),
-                                         error=function(err) NA)
-  )
-
-  lag_n <- parLapply(cl = cl,
-                    lag_clim,
-                    function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
-                                                 env_growth = x[["recent"]],
-                                                 env_reproduction = data.frame(clim = rep(NA, n_it),
-                                                                               ran = rep(NA, n_it)),
-                                                 clim_sd = sd(x[["recent"]]$clim, na.rm = T),
-                                                 clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
-                                                 sig.strength = i),
-                                         error=function(err) NA)
-  )
-
-  lag <- list("growth" = lag_g, "survival" = lag_s, "none" = lag_n)
-
-  str(lag)
-
-  saveRDS(lag, file.path(output_dir, paste("mpm_", i, "_lag.RDS", sep = "")))
-  
-  #### Lagged effect between U & F matrices
-  
-  lag_p <- parLapply(cl = cl,
-                    lag_clim,
-                    function(x) tryCatch(st.lamb(env_surv = x[["lagged"]],
-                                                 env_growth = x[["lagged"]],
                                                  env_reproduction = x[["recent"]],
                                                  clim_sd = sd(x[["recent"]]$clim, na.rm = T),
                                                  clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
                                                  sig.strength = i),
                                          error=function(err) NA)
-  )
-  
-  lag_f <- parLapply(cl = cl,
-                    lag_clim,
-                    function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
-                                                 env_growth = x[["recent"]],
-                                                 env_reproduction = x[["lagged"]],
-                                                 clim_sd = sd(x[["recent"]]$clim, na.rm = T),
-                                                 clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
-                                                 sig.strength = i),
-                                         error=function(err) NA)
-  )
-  
-  lag_n2 <- parLapply(cl = cl,
-                     lag_clim,
-                     function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
-                                                  env_growth = x[["recent"]],
-                                                  env_reproduction = x[["recent"]],
-                                                  clim_sd = sd(x[["recent"]]$clim, na.rm = T),
-                                                  clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
-                                                  sig.strength = i),
-                                          error=function(err) NA)
-  )
-  
-  lag_fp <- list("Umatrix" = lag_p, "Fmatrix" = lag_f, "none" = lag_n2)
-  
-  str(lag_fp)
+)
 
-  saveRDS(lag_fp, file.path(output_dir, paste("mpm_", i, "_lagfp.RDS", sep = "")))
-  
-  stopCluster(cl)
-  
+lag_fp <- list("Umatrix" = lag_p, "Fmatrix" = lag_f, "none" = lag_n2)
+
+str(lag_fp)
+
+saveRDS(lag_fp, file.path(output_dir, paste("mpm_", i, "_lagfp.RDS", sep = "")))
+
+stopCluster(cl)
+
 

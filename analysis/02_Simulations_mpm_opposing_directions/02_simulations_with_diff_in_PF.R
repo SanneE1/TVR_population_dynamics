@@ -4,10 +4,8 @@ library(dplyr)
 library(tidyr)
 library(popbio)
 library(parallel)
-library(ggplot2)
 library(faux)
 library(boot)
-library(patchwork)
 
 set.seed(2)
 
@@ -21,13 +19,18 @@ i = as.numeric(args[1])
 source_file <- args[2]
 output_dir <- args[3]
 
+print(paste("signal strength =", i))
+print(paste("source file =", source_file))
+print(paste("output dir =", output_dir))
+
 ### Create line sourcing to
 source_lines <- function(file, lines){
   source(textConnection(readLines(file)[lines]))
 }
 
-### Get necesary functions. Source lines from 01 folder
-source_lines(source_file, c(14:35, 107:134))
+### Get create_seq(), st.lamb(), n_it and set up parallel. Source lines from 01 folder
+print("Getting create_seq(), st.lamb(), n_it and set up parallel")
+source_lines(source_file, c(24:55, 109:147))
 
 ### Create mpm function with +P (s&g) and - F
 mpm <- function(survival, growth, reproduction,
@@ -79,79 +82,12 @@ mpm <- function(survival, growth, reproduction,
 
 ## Run simulations ----------------------------------------
 
-# Set up parallel
-source_lines(source_file, c(139:152))
-
 # Create climate sequences
-source_lines(source_file, c(196:200))
+print("creating temporal sequences")
+source_lines(source_file, c(204:207))
 
 # Run simulations for U and F matrix
-source_lines(source_file, c(238:277))
+print("running simulations")
+source_lines(source_file, c(251:293))
 
-
-# Plot results ----------------------------------------
-lag_fp <- readRDS(file.path(output_dir, paste0("mpm_", i, "_lagfp.RDS")))
-
-label_auto <- c(
-  "0.9" = "0.9 autocorrelation",
-  "0" = "0 autocorrelation",
-  "-0.9" = "-0.9 autocorrelation"
-)
-
-lag_pf <- lapply(lag_fp, function(x) 
-  lapply(x, function(y) y$df) %>% bind_rows  %>% 
-    mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9"))) 
-  ) %>%
-  bind_rows(., .id = "type") %>%
-  filter(type != "Fmatrix") %>%
-  mutate(type = factor(type, levels = c("Umatrix", "none")))
-
-
-lagpf_p <- ggplot(lag_pf) + 
-  geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)), se = F)+ 
-  geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
-  labs(subtitle = "Different directional response of submatrices to climate driver") +
-  ylab("stochastic log lambda") + xlab("SD of environmental sequence") + 
-  facet_grid(cols = vars(auto_cat), labeller = labeller(auto_cat = label_auto)) + 
-  scale_colour_manual(name = "Simulation type",
-                      values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
-                      labels = c("none" = "control", "Umatrix" = "MCD")) +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-
-
-
-## Get plot of original (both positive) simulation
-orig_dir <- "results/01_Simulations_mpm_same_directions/"
-
-### Load results
-pospos <- file.path(orig_dir, "rds")
-
-lagpf_pos <- lapply(list.files(pospos, pattern = "lagfp.RDS", full.names = T), readRDS)
-sig.strength <- regmatches(list.files(pospos, pattern = "auto.RDS"), 
-                           regexec("mpm\\_(.+)\\_", list.files(pospos, pattern = "auto.RDS"))) %>% 
-  lapply(., function(x) x[2])
-lagpf_pos <- lagpf_pos[[which(sig.strength == i)]]
-
-plot_pos <- lapply(lagpf_pos, function(x) lapply(x, function(y) y$df) %>% bind_rows %>% 
-                    mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))) %>%
-  bind_rows(., .id = "type") %>% filter(type != "Fmatrix") %>% 
-  mutate(type = factor(type, levels = c("Umatrix", "none"))) %>%
-  ggplot(.) +
-  geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)), se = F)+ 
-  geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)))+ 
-  labs(subtitle = "Same directional response of submatrices to climate driver") +
-  ylab("stochastic log lambda") + xlab("SD of environmental sequence") + 
-  facet_grid(cols = vars(auto_cat), labeller = labeller(auto_cat = label_auto)) + 
-  scale_colour_manual(name = "Simulation type",
-                      values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
-                      labels = c("none" = "control", "Umatrix" = "MCD")) + theme_minimal() +
-  theme(legend.position = "bottom")
-
-main_plot <- (plot_pos / lagpf_p) + 
-  plot_layout(guides = "collect") +
-  plot_annotation(tag_levels = "A") & theme_minimal() & theme(legend.position = "bottom")  
-
-ggsave(filename = file.path(output_dir, paste0("lag_plot_PF_", i, ".png")), 
-       main_plot, width = 7, height = 5.5)
 
