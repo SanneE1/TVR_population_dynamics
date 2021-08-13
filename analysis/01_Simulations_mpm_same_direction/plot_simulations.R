@@ -5,19 +5,10 @@ library(tidyr)
 library(patchwork)
 library(scales)
 library(popbio)
+library(purrr)
 
-output_dir <- "results/01_Simulations_mpm_same_directions/"
+output_dir <- "/gpfs1/data/lagged/results/01_Simulations_mpm_same_directions/"
 
-### Load results
-location <- file.path(output_dir, "rds")
-
-auto_f <- lapply(list.files(location, pattern = "auto.RDS", full.names = T), readRDS)
-cov_f <- lapply(list.files(location, pattern = "cov.RDS", full.names = T), readRDS)
-lag_f <- lapply(list.files(location, pattern = "lag.RDS", full.names = T), readRDS)
-lagpf_f <- lapply(list.files(location, pattern = "lagfp.RDS", full.names = T), readRDS)
-sig.strength <- regmatches(list.files(location, pattern = "auto.RDS"), 
-                           regexec("mpm\\_(.+)\\_", list.files(location, pattern = "auto.RDS"))) %>% 
-  lapply(., function(x) x[2])
 
 ##  -------------------------------------
 ##  lambda summary plot
@@ -28,7 +19,13 @@ label_auto <- c(
   "-0.9" = "-0.9 autocorrelation"
 )
 
-sum_plot <- function(a, c, p, f, ss){
+sum_plot <- function(file, ss){
+
+  
+  a = file[[1]]
+  c = file[[2]]
+  p = file[[3]]
+  f = file[[4]]
   
   ### Climate variables
   clim_sd <- rep(seq(from = 0.01, to = 2, length.out = 10), 90)
@@ -120,19 +117,83 @@ sum_plot <- function(a, c, p, f, ss){
 
 }
 
+### Load results
+location <- file.path(output_dir, "rds")
 
-auto <- lapply(auto_f, function(x) lapply(x, function(y) y$df) %>% bind_rows)  
-cov <- lapply(cov_f, function(x) lapply(x, function(y) y$df) %>% bind_rows)
-lag <- lapply(lag_f, function(x) lapply(x, function(y) lapply(y, function(z) z$df) %>% bind_rows))
-lagpf <- lapply(lagpf_f, function(x) lapply(x, function(y) lapply(y, function(z) z[[1]]) %>% Filter(Negate(anyNA), .) %>% bind_rows))
+# list.files(location, pattern = "1", full.names = T)
+# list.files(location, pattern = "0.5", full.names = T)
+# list.files(location, pattern = "0.25", full.names = T)
+# list.files(location, pattern = "0.05", full.names = T)
 
-pmap(list(a = auto, 
-          c = cov, 
-          p = lag, 
-          f = lagpf, 
-          ss = sig.strength), 
-     sum_plot)
+#print("loading RDSs done")
+#files_1 <- lapply(list.files(location, pattern = "1", full.names = T), readRDS)
 
+#print("formating autocorrelation df")
+#files_1[[1]] <- lapply(files_1[[1]], function(x) x$df) %>% bind_rows
+
+#print("format covariance df")
+#files_1[[2]] <- lapply(files_1[[2]], function(x) x$df) %>% bind_rows
+
+#print("format sg simulation df")
+#files_1[[3]] <- lapply(files_1[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
+
+#print("format fp simulation df")
+#files_1[[4]] <- lapply(files_1[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
+
+#sum_plot(files_1, ss = 1)
+#rm(files_1)
+
+files_0.5 <- lapply(list.files(location, pattern = "0.5", full.names = T), readRDS)
+
+print("formating autocorrelation df")
+files_0.5[[1]] <- lapply(files_0.5[[1]], function(x) x$df) %>% bind_rows
+
+print("format covariance df")
+files_0.5[[2]] <- lapply(files_0.5[[2]], function(x) x$df) %>% bind_rows
+
+print("format sg simulation df")
+files_0.5[[3]] <- lapply(files_0.5[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
+
+print("format fp simulation df")
+files_0.5[[4]] <- lapply(files_0.5[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
+
+sum_plot(file = files_0.5, ss = "0.5")
+rm(files_0.5)
+
+files_0.25 <- lapply(list.files(location, pattern = "0.25", full.names = T), readRDS)
+
+print("formating autocorrelation df")
+files_0.25[[1]] <- lapply(files_0.25[[1]], function(x) x$df) %>% bind_rows
+
+print("format covariance df")
+files_0.25[[2]] <- lapply(files_0.25[[2]], function(x) x$df) %>% bind_rows
+
+print("format sg simulation df")
+files_0.25[[3]] <- lapply(files_0.25[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
+
+print("format fp simulation df")
+files_0.25[[4]] <- lapply(files_0.25[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
+
+sum_plot(files_0.25, ss = "0.25")
+rm(files_0.25)
+
+
+files_0.05 <- lapply(list.files(location, pattern = "0.05", full.names = T), readRDS)
+
+print("formating autocorrelation df")
+files_0.05[[1]] <- lapply(files_0.05[[1]], function(x) x$df) %>% bind_rows
+
+print("format covariance df")
+files_0.05[[2]] <- lapply(files_0.05[[2]], function(x) x$df) %>% bind_rows
+
+print("format sg simulation df")
+files_0.05[[3]] <- lapply(files_0.05[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
+
+print("format fp simulation df")
+files_0.05[[4]] <- lapply(files_0.05[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
+
+sum_plot(files_0.05, ss = "0.05")
+rm(files_0.05)
 
 ##  -------------------------------------
 ##  Plot a lambda time sequence of simulation with i = 0.5 (50% of temporal variance explained by climate driver)
