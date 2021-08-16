@@ -146,7 +146,7 @@ clim_auto <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
 suppressMessages(clusterExport(cl, c("i", "create_seq", "inv.logit", "mpm", "st.lamb", "clim_auto", "clim_sd", "n_it")))
 
 
-auto <- parLapply(cl = cl,
+auto <- parLapplyLB(cl = cl,
                   as.list(c(1:900)),
                   function(x) st.lamb(env_surv = create_seq(n_it = n_it, clim_sd[x], clim_auto[x], 0)[["recent"]],
                                       env_growth = create_seq(n_it = n_it, clim_sd[x], clim_auto[x], 0)[["recent"]],
@@ -184,7 +184,7 @@ clim <- lapply(as.list(c(1:900)), cov_clim)
 
 clusterExport(cl, c("clim"))
 
-cov <- parLapply(cl = cl,
+cov <- parLapplyLB(cl = cl,
                  clim,
                  function(x) tryCatch(st.lamb(env_surv = x[["surv"]],
                                               env_growth = x[["growth"]],
@@ -206,7 +206,7 @@ lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(n_it, clim_sd = cli
 suppressMessages(clusterExport(cl, c("lag_clim")))
 
 #### Lagged effect within U matrix
-lag_g <- parLapply(cl = cl,
+lag_g <- parLapplyLB(cl = cl,
                    lag_clim,
                    function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
                                                 env_growth = x[["lagged"]],
@@ -218,7 +218,7 @@ lag_g <- parLapply(cl = cl,
                                         error=function(err) NA)
 )
 
-lag_s <- parLapply(cl = cl,
+lag_s <- parLapplyLB(cl = cl,
                    lag_clim,
                    function(x) tryCatch(st.lamb(env_surv = x[["lagged"]],
                                                 env_growth = x[["recent"]],
@@ -230,7 +230,7 @@ lag_s <- parLapply(cl = cl,
                                         error=function(err) NA)
 )
 
-lag_n <- parLapply(cl = cl,
+lag_n <- parLapplyLB(cl = cl,
                    lag_clim,
                    function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
                                                 env_growth = x[["recent"]],
@@ -249,7 +249,7 @@ print("done w/ s/g sim")
 saveRDS(lag, file.path(output_dir, paste("mpm_", i, "_lag.RDS", sep = "")))
 
 #### Lagged effect between U & F matrices
-lag_p <- parLapply(cl = cl,
+lag_p <- parLapplyLB(cl = cl,
                    lag_clim,
                    function(x) tryCatch(st.lamb(env_surv = x[["lagged"]],
                                                 env_growth = x[["lagged"]],
@@ -260,7 +260,7 @@ lag_p <- parLapply(cl = cl,
                                         error=function(err) NA)
 )
 
-lag_f <- parLapply(cl = cl,
+lag_f <- parLapplyLB(cl = cl,
                    lag_clim,
                    function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
                                                 env_growth = x[["recent"]],
@@ -271,7 +271,7 @@ lag_f <- parLapply(cl = cl,
                                         error=function(err) NA)
 )
 
-lag_n2 <- parLapply(cl = cl,
+lag_n2 <- parLapplyLB(cl = cl,
                     lag_clim,
                     function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
                                                  env_growth = x[["recent"]],

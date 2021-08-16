@@ -143,74 +143,77 @@ location <- file.path(output_dir, "rds")
 #sum_plot(files_1, ss = 1)
 #rm(files_1)
 
-files_0.5 <- lapply(list.files(location, pattern = "0.5", full.names = T), readRDS)
+#files_0.5 <- lapply(list.files(location, pattern = "0.5", full.names = T), readRDS)
 
-print("formating autocorrelation df")
-files_0.5[[1]] <- lapply(files_0.5[[1]], function(x) x$df) %>% bind_rows
+#print("formating autocorrelation df")
+#files_0.5[[1]] <- lapply(files_0.5[[1]], function(x) x$df) %>% bind_rows
 
-print("format covariance df")
-files_0.5[[2]] <- lapply(files_0.5[[2]], function(x) x$df) %>% bind_rows
+#print("format covariance df")
+#files_0.5[[2]] <- lapply(files_0.5[[2]], function(x) x$df) %>% bind_rows
 
-print("format sg simulation df")
-files_0.5[[3]] <- lapply(files_0.5[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
+#print("format sg simulation df")
+#files_0.5[[3]] <- lapply(files_0.5[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
 
-print("format fp simulation df")
-files_0.5[[4]] <- lapply(files_0.5[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
+#print("format fp simulation df")
+#files_0.5[[4]] <- lapply(files_0.5[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
 
-sum_plot(file = files_0.5, ss = "0.5")
-rm(files_0.5)
+#sum_plot(file = files_0.5, ss = "0.5")
+#rm(files_0.5)
 
-files_0.25 <- lapply(list.files(location, pattern = "0.25", full.names = T), readRDS)
+#files_0.25 <- lapply(list.files(location, pattern = "0.25", full.names = T), readRDS)
 
-print("formating autocorrelation df")
-files_0.25[[1]] <- lapply(files_0.25[[1]], function(x) x$df) %>% bind_rows
+#print("formating autocorrelation df")
+#files_0.25[[1]] <- lapply(files_0.25[[1]], function(x) x$df) %>% bind_rows
 
-print("format covariance df")
-files_0.25[[2]] <- lapply(files_0.25[[2]], function(x) x$df) %>% bind_rows
+#print("format covariance df")
+#files_0.25[[2]] <- lapply(files_0.25[[2]], function(x) x$df) %>% bind_rows
 
-print("format sg simulation df")
-files_0.25[[3]] <- lapply(files_0.25[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
+#print("format sg simulation df")
+#files_0.25[[3]] <- lapply(files_0.25[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
 
-print("format fp simulation df")
-files_0.25[[4]] <- lapply(files_0.25[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
+#print("format fp simulation df")
+#files_0.25[[4]] <- lapply(files_0.25[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
 
-sum_plot(files_0.25, ss = "0.25")
-rm(files_0.25)
+#sum_plot(files_0.25, ss = "0.25")
+#rm(files_0.25)
 
 
-files_0.05 <- lapply(list.files(location, pattern = "0.05", full.names = T), readRDS)
+#files_0.05 <- lapply(list.files(location, pattern = "0.05", full.names = T), readRDS)
 
-print("formating autocorrelation df")
-files_0.05[[1]] <- lapply(files_0.05[[1]], function(x) x$df) %>% bind_rows
+#print("formating autocorrelation df")
+#files_0.05[[1]] <- lapply(files_0.05[[1]], function(x) x$df) %>% bind_rows
 
-print("format covariance df")
-files_0.05[[2]] <- lapply(files_0.05[[2]], function(x) x$df) %>% bind_rows
+#print("format covariance df")
+#files_0.05[[2]] <- lapply(files_0.05[[2]], function(x) x$df) %>% bind_rows
 
-print("format sg simulation df")
-files_0.05[[3]] <- lapply(files_0.05[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
+#print("format sg simulation df")
+#files_0.05[[3]] <- lapply(files_0.05[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
 
-print("format fp simulation df")
-files_0.05[[4]] <- lapply(files_0.05[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
+#print("format fp simulation df")
+#files_0.05[[4]] <- lapply(files_0.05[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
 
-sum_plot(files_0.05, ss = "0.05")
-rm(files_0.05)
+#sum_plot(files_0.05, ss = "0.05")
+#rm(files_0.05)
 
 ##  -------------------------------------
 ##  Plot a lambda time sequence of simulation with i = 0.5 (50% of temporal variance explained by climate driver)
 ##  -------------------------------------
-l_seq0 <- data.frame( Umatrix = lapply(as.list(as.data.frame(t(lagpf_f[[3]]$Umatrix[[20]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
-                     none = lapply(as.list(as.data.frame(t(lagpf_f[[3]]$none[[20]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
-                     time = c(1:5002)
+lagpf_0.5 <- readRDS(list.files(location, pattern = "0.5_lagfp.RDS", full.names = T))
+
+
+l_seq0 <- data.frame( Umatrix = lapply(as.list(as.data.frame(t(lagpf_0.5$Umatrix[[20]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
+                     none = lapply(as.list(as.data.frame(t(lagpf_0.5$none[[20]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
+                     time = c(1:50002)
 ) %>% pivot_longer(cols = -time, names_to = "type", values_to = "lambda")
 
-l_seqneg <- data.frame( Umatrix = lapply(as.list(as.data.frame(t(lagpf_f[[3]]$Umatrix[[10]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
-                      none = lapply(as.list(as.data.frame(t(lagpf_f[[3]]$none[[10]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
-                      time = c(1:5002)
+l_seqneg <- data.frame( Umatrix = lapply(as.list(as.data.frame(t(lagpf_0.5$Umatrix[[10]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
+                      none = lapply(as.list(as.data.frame(t(lagpf_0.5$none[[10]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
+                      time = c(1:50002)
 ) %>% pivot_longer(cols = -time, names_to = "type", values_to = "lambda")
 
-l_seqpos <- data.frame( Umatrix = lapply(as.list(as.data.frame(t(lagpf_f[[3]]$Umatrix[[30]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
-                        none = lapply(as.list(as.data.frame(t(lagpf_f[[3]]$none[[30]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
-                        time = c(1:5002)
+l_seqpos <- data.frame( Umatrix = lapply(as.list(as.data.frame(t(lagpf_0.5$Umatrix[[30]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
+                        none = lapply(as.list(as.data.frame(t(lagpf_0.5$none[[30]]$mats))), function(x) log(lambda(matrix2(x, byrow = F)))) %>% bind_rows() %>% t,
+                        time = c(1:50002)
 ) %>% pivot_longer(cols = -time, names_to = "type", values_to = "lambda")
 
 ### zoom in on 35 years
@@ -318,7 +321,7 @@ plot_cell <- function(mats, title) {
   )
   
   # Randomly select a sequence with a low and high sd
-  # low_sd <- sample(which(round(df$clim_sd, digits = 3) == 0.231 & df$clim_auto == 0), 1)
+  low_sd <- sample(which(round(df$clim_sd, digits = 3) == 0.231 & df$clim_auto == 0), 1)
   mid_sd <- sample(which(round(df$clim_sd, digits = 3) == 1.116 & df$clim_auto == 0), 1)
   high_sd <- sample(which(round(df$clim_sd, digits = 3) == 2 & df$clim_auto == 0), 1)
   
@@ -335,6 +338,7 @@ plot_cell <- function(mats, title) {
     scale_y_log10() + ggtitle(title)
 }
 
+stop("still have to re-write the cellvalue histograms")
 
 ## print cellvalues for all signalstrengths -------------------- FOR LOOP OR FUNCTION CREATES A PDF THAT ISN'T READABLE, BUT MANUALLY WORKS JUST FINE?? ------------------
 i = 1

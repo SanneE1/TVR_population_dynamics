@@ -11,10 +11,11 @@
 
 #Resources
 # max running time
-#SBATCH -t 30:00:00
+#SBATCH -t 10:00:00
 
 # memory per core (hard limit)
-#SBATCH --mem-per-cpu=4G
+#SBATCH --mem-per-cpu=8G
+#SBATCH --cpus-per-task=28
  
 # create output direcotry per job
 OUTPUT_PATH="/work/$USER/$SLURM_JOB_NAME-$SLURM_JOB_ID"
