@@ -6,6 +6,8 @@ library(popbio)
 library(parallel)
 library(faux)
 library(boot)
+library(ggplot2)
+library(patchwork)
 
 set.seed(2)
 
@@ -90,4 +92,48 @@ source_lines(source_file, c(204:207))
 print("running simulations")
 source_lines(source_file, c(251:293))
 
+
+
+# --------------------------------------------
+# Plot simulations
+# --------------------------------------------
+
+lag_fp <- readRDS(file.path(output_dir, paste("mpm_", i, "_lagfp.RDS", sep = "")))
+
+lagpf_df <- lapply(lag_fp, function(x) x %>% mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))) %>%
+  bind_rows(., .id = "type") %>% mutate(type = factor(type, levels = c("none", "Umatrix", "Fmatrix")))
+
+lagf <- lagpf_df %>% filter(type != "Fmatrix") %>%
+  ggplot(.) + 
+  geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)), se = F)+ 
+  geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)), position = position_dodge(width = 0.1))+ 
+  labs(subtitle = "Opposing directional response of submatrices to climate driver") +
+  ylab("stochastic log lambda") + xlab("SD of environmental sequence") + 
+  facet_grid(cols = vars(auto_cat), labeller = labeller(auto_cat = label_auto)) + 
+  scale_colour_manual(name = "Simulation type",
+                      values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
+                      labels = c("none" = "control", "Umatrix" = "MCD")) + theme_minimal() +
+  theme(legend.position = "bottom")
+
+ggsave(filename = file.path(output_dir, paste0("U_lag_plot_", i, ".png")), lagf)
+
+pos <- readRDS(paste0("/gpfs1/data/lagged/results/01_Simulations_mpm_same_direction/rds/mpm_", i, "_lagfp.RDS")) %>%
+  lapply(., function(x) x %>% mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))) %>%
+  bind_rows(., .id = "type") %>% mutate(type = factor(type, levels = c("none", "Umatrix", "Fmatrix")))
+
+pos_plot <- lagpf_df %>% filter(type != "Fmatrix") %>%
+  ggplot(.) + 
+  geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)), se = F)+ 
+  geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)), position = position_dodge(width = 0.1))+ 
+  labs(subtitle = "Same directional response of submatrices to climate driver") +
+  ylab("stochastic log lambda") + xlab("SD of environmental sequence") + 
+  facet_grid(cols = vars(auto_cat), labeller = labeller(auto_cat = label_auto)) + 
+  scale_colour_manual(name = "Simulation type",
+                      values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
+                      labels = c("none" = "control", "Umatrix" = "MCD")) + theme_minimal() +
+  theme(legend.position = "bottom")
+
+plot <- (lagf / pos_plot) + plot_layout(guides = "collect")
+
+ggsave(filename = file.path(output_dir, paste0("Comparison_plot_", i, ".png")), plot)
 
