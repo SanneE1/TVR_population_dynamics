@@ -120,80 +120,75 @@ sum_plot <- function(file, ss){
 ### Load results
 location <- file.path(output_dir, "rds")
 
-# list.files(location, pattern = "1", full.names = T)
-# list.files(location, pattern = "0.5", full.names = T)
-# list.files(location, pattern = "0.25", full.names = T)
-# list.files(location, pattern = "0.05", full.names = T)
+print("loading RDSs done")
+files_1 <- lapply(list.files(location, pattern = "1", full.names = T), readRDS)
 
-#print("loading RDSs done")
-#files_1 <- lapply(list.files(location, pattern = "1", full.names = T), readRDS)
+print("formating autocorrelation df")
+files_1[[1]] <- lapply(files_1[[1]], function(x) x$df) %>% bind_rows
 
-#print("formating autocorrelation df")
-#files_1[[1]] <- lapply(files_1[[1]], function(x) x$df) %>% bind_rows
+print("format covariance df")
+files_1[[2]] <- lapply(files_1[[2]], function(x) x$df) %>% bind_rows
 
-#print("format covariance df")
-#files_1[[2]] <- lapply(files_1[[2]], function(x) x$df) %>% bind_rows
+print("format sg simulation df")
+files_1[[3]] <- lapply(files_1[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
 
-#print("format sg simulation df")
-#files_1[[3]] <- lapply(files_1[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
+print("format fp simulation df")
+files_1[[4]] <- lapply(files_1[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
 
-#print("format fp simulation df")
-#files_1[[4]] <- lapply(files_1[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
+sum_plot(files_1, ss = 1)
+rm(files_1)
 
-#sum_plot(files_1, ss = 1)
-#rm(files_1)
+files_0.5 <- lapply(list.files(location, pattern = "0.5", full.names = T), readRDS)
 
-#files_0.5 <- lapply(list.files(location, pattern = "0.5", full.names = T), readRDS)
+print("formating autocorrelation df")
+files_0.5[[1]] <- lapply(files_0.5[[1]], function(x) x$df) %>% bind_rows
 
-#print("formating autocorrelation df")
-#files_0.5[[1]] <- lapply(files_0.5[[1]], function(x) x$df) %>% bind_rows
+print("format covariance df")
+files_0.5[[2]] <- lapply(files_0.5[[2]], function(x) x$df) %>% bind_rows
 
-#print("format covariance df")
-#files_0.5[[2]] <- lapply(files_0.5[[2]], function(x) x$df) %>% bind_rows
+print("format sg simulation df")
+files_0.5[[3]] <- lapply(files_0.5[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
 
-#print("format sg simulation df")
-#files_0.5[[3]] <- lapply(files_0.5[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
+print("format fp simulation df")
+files_0.5[[4]] <- lapply(files_0.5[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
 
-#print("format fp simulation df")
-#files_0.5[[4]] <- lapply(files_0.5[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
+sum_plot(file = files_0.5, ss = "0.5")
+rm(files_0.5)
 
-#sum_plot(file = files_0.5, ss = "0.5")
-#rm(files_0.5)
+files_0.25 <- lapply(list.files(location, pattern = "0.25", full.names = T), readRDS)
 
-#files_0.25 <- lapply(list.files(location, pattern = "0.25", full.names = T), readRDS)
+print("formating autocorrelation df")
+files_0.25[[1]] <- lapply(files_0.25[[1]], function(x) x$df) %>% bind_rows
 
-#print("formating autocorrelation df")
-#files_0.25[[1]] <- lapply(files_0.25[[1]], function(x) x$df) %>% bind_rows
+print("format covariance df")
+files_0.25[[2]] <- lapply(files_0.25[[2]], function(x) x$df) %>% bind_rows
 
-#print("format covariance df")
-#files_0.25[[2]] <- lapply(files_0.25[[2]], function(x) x$df) %>% bind_rows
+print("format sg simulation df")
+files_0.25[[3]] <- lapply(files_0.25[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
 
-#print("format sg simulation df")
-#files_0.25[[3]] <- lapply(files_0.25[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
+print("format fp simulation df")
+files_0.25[[4]] <- lapply(files_0.25[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
 
-#print("format fp simulation df")
-#files_0.25[[4]] <- lapply(files_0.25[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
-
-#sum_plot(files_0.25, ss = "0.25")
-#rm(files_0.25)
+sum_plot(files_0.25, ss = "0.25")
+rm(files_0.25)
 
 
-#files_0.05 <- lapply(list.files(location, pattern = "0.05", full.names = T), readRDS)
+files_0.05 <- lapply(list.files(location, pattern = "0.05", full.names = T), readRDS)
 
-#print("formating autocorrelation df")
-#files_0.05[[1]] <- lapply(files_0.05[[1]], function(x) x$df) %>% bind_rows
+print("formating autocorrelation df")
+files_0.05[[1]] <- lapply(files_0.05[[1]], function(x) x$df) %>% bind_rows
 
-#print("format covariance df")
-#files_0.05[[2]] <- lapply(files_0.05[[2]], function(x) x$df) %>% bind_rows
+print("format covariance df")
+files_0.05[[2]] <- lapply(files_0.05[[2]], function(x) x$df) %>% bind_rows
 
-#print("format sg simulation df")
-#files_0.05[[3]] <- lapply(files_0.05[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
+print("format sg simulation df")
+files_0.05[[3]] <- lapply(files_0.05[[3]], function(x) lapply(x, function(y) y$df) %>% bind_rows)
 
-#print("format fp simulation df")
-#files_0.05[[4]] <- lapply(files_0.05[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
+print("format fp simulation df")
+files_0.05[[4]] <- lapply(files_0.05[[4]], function(x) lapply(x, function(y) y$df) %>% Filter(Negate(anyNA), .) %>% bind_rows)
 
-#sum_plot(files_0.05, ss = "0.05")
-#rm(files_0.05)
+sum_plot(files_0.05, ss = "0.05")
+rm(files_0.05)
 
 ##  -------------------------------------
 ##  Plot a lambda time sequence of simulation with i = 0.5 (50% of temporal variance explained by climate driver)
@@ -239,16 +234,6 @@ time_seriespos <- ggplot(l_seqpos) +
   scale_colour_manual(values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
                       label = c("none" = "control", "Umatrix" = "MCD"))
 
-# ggsave(filename = file.path(output_dir, "lambda_timeseries", "timeseries_0.tiff"), time_series0,width = 9.22, height = 6.5)
-# ggsave(filename = file.path(output_dir, "lambda_timeseries", "timeseries_neg.tiff"), time_seriesneg, width = 9.22, height = 6.5)
-# ggsave(filename = file.path(output_dir, "lambda_timeseries", "timeseries_pos.tiff"), time_seriespos, width = 9.22, height = 6.5)
-# 
-# time_series <- time_seriespos + time_series0 + time_seriesneg + plot_layout(nrow = 3, guides = "collect") + 
-#   plot_annotation(title = "lambda time series")
-# 
-# ggsave(filename = file.path(output_dir, "lambda_timeseries", "summary_timeseries.tiff"), 
-#        plot = time_series, width = 9.22, height = 6.5)
-
 int_ann_0 <- l_seq0 %>% 
   group_by(type) %>% 
   arrange(time) %>%
@@ -268,7 +253,7 @@ int_ann_neg <- l_seqneg %>%
   mutate(diff = (lambda %>% exp) - (lag(lambda, default = first(lambda)) %>% exp),
          type = factor(type, levels = c("Umatrix", "none"))) %>%
   ggplot(.) +
-  geom_density(aes(x = diff, fill = type, colour = type), alpha = 0.5)  +
+  geom_density(aes(x = diff, fill = type, colour = type), alpha = 0.5, show.legend = F)  +
   scale_fill_manual(name = "Simulation", label = c("none" = "control", "Umatrix" = "MCD"), 
                     values = c("Umatrix" = "#E69F00", "none" = "#0072B2")) +  
   scale_colour_manual(name = "Simulation", label = c("none" = "control", "Umatrix" = "MCD"), 
@@ -281,7 +266,7 @@ int_ann_pos <- l_seqpos %>%
   mutate(diff = (lambda %>% exp) - (lag(lambda, default = first(lambda)) %>% exp),
          type = factor(type, levels = c("Umatrix", "none"))) %>%
   ggplot(.) +
-  geom_density(aes(x = diff, fill = type, colour = type), alpha = 0.5) +
+  geom_density(aes(x = diff, fill = type, colour = type), alpha = 0.5, show.legend = F) +
   scale_fill_manual(name = "Simulation", label = c("none" = "control", "Umatrix" = "MCD"), 
                     values = c("Umatrix" = "#E69F00", "none" = "#0072B2")) +  
   scale_colour_manual(name = "Simulation", label = c("none" = "control", "Umatrix" = "MCD"), 
@@ -308,6 +293,7 @@ ggsave(filename = file.path(output_dir, "lambda_timeseries", "timeseries&diff.ti
        plot = time_diff, width = 9.22, height = 6.5)
 
 
+rm(lagpf_0.5)
 
 ##  -------------------------------------
 ##  Save histograms of cell values 
@@ -326,7 +312,7 @@ plot_cell <- function(mats, title) {
   high_sd <- sample(which(round(df$clim_sd, digits = 3) == 2 & df$clim_auto == 0), 1)
   
   
-  values <- rbind(#`0.2` = mats[[low_sd]]$mats %>% as.data.frame,
+  values <- rbind(`0.2` = mats[[low_sd]]$mats %>% as.data.frame,
                   `1.1` = mats[[mid_sd]]$mats %>% as.data.frame,
                   `2.0` = mats[[high_sd]]$mats %>% as.data.frame) %>% 
     tibble::rownames_to_column(., "SD") %>% 
@@ -338,64 +324,58 @@ plot_cell <- function(mats, title) {
     scale_y_log10() + ggtitle(title)
 }
 
-stop("still have to re-write the cellvalue histograms")
 
 ## print cellvalues for all signalstrengths -------------------- FOR LOOP OR FUNCTION CREATES A PDF THAT ISN'T READABLE, BUT MANUALLY WORKS JUST FINE?? ------------------
-i = 1
-pdf(file.path(output_dir, "cell_value_plots", paste0("sigstrength_", sig.strength[[i]], ".pdf")))
+pdf(file.path(output_dir, "cell_value_plots", paste0("sigstrength_1.pdf")))
 
-plot_cell(auto_f[[i]], "autocorrelation")
-plot_cell(cov_f[[i]], "covariation")
-plot_cell(lag_f[[i]]$survival, "survival lagged")
-plot_cell(lag_f[[i]]$growth, "growth lagged")
-plot_cell(lag_f[[i]]$none, "neither vital rate lagged")
-plot_cell(lagpf_f[[i]]$Umatrix, "U lagged")
-plot_cell(lagpf_f[[i]]$Fmatrix, "F lagged")
-plot_cell(lagpf_f[[i]]$none, "Neither submatrices lagged")
-
-dev.off()
-
-
-i=2
-pdf(file.path(output_dir, "cell_value_plots", paste0("sigstrength_", sig.strength[[i]], ".pdf")))
-
-plot_cell(auto_f[[i]], "autocorrelation")
-plot_cell(cov_f[[i]], "covariation")
-plot_cell(lag_f[[i]]$survival, "survival lagged")
-plot_cell(lag_f[[i]]$growth, "growth lagged")
-plot_cell(lag_f[[i]]$none, "neither vital rate lagged")
-plot_cell(lagpf_f[[i]]$Umatrix, "U lagged")
-plot_cell(lagpf_f[[i]]$Fmatrix, "F lagged")
-plot_cell(lagpf_f[[i]]$none, "Neither submatrices lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_1_auto.RDS")), "autocorrelation")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_1_cov.RDS")), "covariation")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_1_lag.RDS"))$survival, "survival lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_1_lag.RDS"))$growth, "growth lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_1_lag.RDS"))$none, "neither vital rate lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_1_lagfp.RDS"))$Umatrix, "U lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_1_lagfp.RDS"))$Fmatrix, "F lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_1_lagfp.RDS"))$none, "Neither submatrices lagged")
 
 dev.off()
 
 
-i=3
-pdf(file.path(output_dir, "cell_value_plots", paste0("sigstrength_", sig.strength[[i]], ".pdf")))
+pdf(file.path(output_dir, "cell_value_plots", paste0("sigstrength_0.5.pdf")))
 
-plot_cell(auto_f[[i]], "autocorrelation")
-plot_cell(cov_f[[i]], "covariation")
-plot_cell(lag_f[[i]]$survival, "survival lagged")
-plot_cell(lag_f[[i]]$growth, "growth lagged")
-plot_cell(lag_f[[i]]$none, "neither vital rate lagged")
-plot_cell(lagpf_f[[i]]$Umatrix, "U lagged")
-plot_cell(lagpf_f[[i]]$Fmatrix, "F lagged")
-plot_cell(lagpf_f[[i]]$none, "Neither submatrices lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.5_auto.RDS")), "autocorrelation")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.5_cov.RDS")), "covariation")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.5_lag.RDS"))$survival, "survival lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.5_lag.RDS"))$growth, "growth lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.5_lag.RDS"))$none, "neither vital rate lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.5_lagfp.RDS"))$Umatrix, "U lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.5_lagfp.RDS"))$Fmatrix, "F lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.5_lagfp.RDS"))$none, "Neither submatrices lagged")
+
+dev.off()
+
+pdf(file.path(output_dir, "cell_value_plots", paste0("sigstrength_0.25.pdf")))
+
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.25_auto.RDS")), "autocorrelation")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.25_cov.RDS")), "covariation")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.25_lag.RDS"))$survival, "survival lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.25_lag.RDS"))$growth, "growth lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.25_lag.RDS"))$none, "neither vital rate lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.25_lagfp.RDS"))$Umatrix, "U lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.25_lagfp.RDS"))$Fmatrix, "F lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.25_lagfp.RDS"))$none, "Neither submatrices lagged")
 
 dev.off()
 
 
-i=4
-pdf(file.path(output_dir, "cell_value_plots", paste0("sigstrength_", sig.strength[[i]], ".pdf")))
+pdf(file.path(output_dir, "cell_value_plots", paste0("sigstrength_0.05.pdf")))
 
-plot_cell(auto_f[[i]], "autocorrelation")
-plot_cell(cov_f[[i]], "covariation")
-plot_cell(lag_f[[i]]$survival, "survival lagged")
-plot_cell(lag_f[[i]]$growth, "growth lagged")
-plot_cell(lag_f[[i]]$none, "neither vital rate lagged")
-plot_cell(lagpf_f[[i]]$Umatrix, "U lagged")
-plot_cell(lagpf_f[[i]]$Fmatrix, "F lagged")
-plot_cell(lagpf_f[[i]]$none, "Neither submatrices lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.05_auto.RDS")), "autocorrelation")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.05_cov.RDS")), "covariation")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.05_lag.RDS"))$survival, "survival lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.05_lag.RDS"))$growth, "growth lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.05_lag.RDS"))$none, "neither vital rate lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.05_lagfp.RDS"))$Umatrix, "U lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.05_lagfp.RDS"))$Fmatrix, "F lagged")
+plot_cell(readRDS(file.path(output_dir, "rds", "mpm_0.05_lagfp.RDS"))$none, "Neither submatrices lagged")
 
 dev.off()
