@@ -9,15 +9,14 @@
 
 #Resources
 # max running time
-#SBATCH -t 30:00:00
+#SBATCH -t 12:00:00
 
 # memory per core (hard limit)
 #SBATCH --mem-per-cpu=8G
 #SBATCH --cpus-per-task=10
  
 # create output direcotry per job
-OUTPUT_PATH="/work/$USER/$SLURM_JOB_NAME-$SLURM_JOB_ID"
-mkdir -p "$OUTPUT_PATH"
+OUTPUT_PATH="/gpfs1/data/lagged/results/01_Simulations_mpm_same_direction/rds"
 
 # Load modules
 module load foss/2019b R/4.0.0-2

@@ -9,7 +9,7 @@
 
 #Resources
 # max running time
-#SBATCH -t 0:15:00
+#SBATCH -t 0:30:00
 
 # memory per core (hard limit)
 #SBATCH --mem-per-cpu=10G

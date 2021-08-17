@@ -19,7 +19,7 @@ stop("Provide (only) signal strength for the analysis", call.=F)
 
 i = as.numeric(args[1])
 source_file <- args[2]
-output_dir <- args[3]
+output_dir <- "/gpfs1/data/lagged/results/02_Simulations_mpm_same_directions/"
 
 print(paste("signal strength =", i))
 print(paste("source file =", source_file))
