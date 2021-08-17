@@ -97,10 +97,17 @@ source_lines(source_file, c(251:293))
 # --------------------------------------------
 # Plot simulations
 # --------------------------------------------
+label_auto <- c(
+  "0.9" = "0.9 autocorrelation",
+  "0" = "0 autocorrelation",
+  "-0.9" = "-0.9 autocorrelation"
+)
 
 lag_fp <- readRDS(file.path(output_dir, paste("mpm_", i, "_lagfp.RDS", sep = "")))
 
-lagpf_df <- lapply(lag_fp, function(x) x %>% mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))) %>%
+lagpf_df <- lapply(lag_fp, function(x) lapply(x, function(y) y$df) %>% bind_rows %>% 
+                     mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))
+                   ) %>%
   bind_rows(., .id = "type") %>% mutate(type = factor(type, levels = c("none", "Umatrix", "Fmatrix")))
 
 lagf <- lagpf_df %>% filter(type != "Fmatrix") %>%
@@ -115,13 +122,16 @@ lagf <- lagpf_df %>% filter(type != "Fmatrix") %>%
                       labels = c("none" = "control", "Umatrix" = "MCD")) + theme_minimal() +
   theme(legend.position = "bottom")
 
-ggsave(filename = file.path(output_dir, paste0("U_lag_plot_", i, ".png")), lagf)
+ggsave(filename = file.path(output_dir, paste0("U_lag_plot_", i, ".png")), lagf,
+       width = 8.22, height = 4, units = "in")
 
-pos <- readRDS(paste0("/gpfs1/data/lagged/results/01_Simulations_mpm_same_direction/rds/mpm_", i, "_lagfp.RDS")) %>%
-  lapply(., function(x) x %>% mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))) %>%
+pos <- readRDS(paste0("/gpfs1/data/lagged/results/01_Simulations_mpm_same_directions/rds/mpm_", i, "_lagfp.RDS")) %>%
+  lapply(., function(x) lapply(x, function(y) y$df) %>% bind_rows %>% 
+           mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")))
+         ) %>%
   bind_rows(., .id = "type") %>% mutate(type = factor(type, levels = c("none", "Umatrix", "Fmatrix")))
 
-pos_plot <- lagpf_df %>% filter(type != "Fmatrix") %>%
+pos_plot <- pos %>% filter(type != "Fmatrix") %>%
   ggplot(.) + 
   geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)), se = F)+ 
   geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)), position = position_dodge(width = 0.1))+ 
@@ -133,7 +143,7 @@ pos_plot <- lagpf_df %>% filter(type != "Fmatrix") %>%
                       labels = c("none" = "control", "Umatrix" = "MCD")) + theme_minimal() +
   theme(legend.position = "bottom")
 
-plot <- (lagf / pos_plot) + plot_layout(guides = "collect")
+plot <- (pos_plot / lagf ) + plot_layout(guides = "collect") & theme(legend.position = "bottom")
 
 ggsave(filename = file.path(output_dir, paste0("Comparison_plot_", i, ".png")), plot)
 
