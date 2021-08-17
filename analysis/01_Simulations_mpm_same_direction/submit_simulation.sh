@@ -13,7 +13,7 @@
 
 # memory per core (hard limit)
 #SBATCH --mem-per-cpu=8G
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=25
  
 # create output direcotry per job
 OUTPUT_PATH="/gpfs1/data/lagged/results/01_Simulations_mpm_same_direction/rds"

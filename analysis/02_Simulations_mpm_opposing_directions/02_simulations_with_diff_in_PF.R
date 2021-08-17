@@ -13,7 +13,7 @@ set.seed(2)
 
 args = commandArgs(trailingOnly = T)
 
-if(length(args)!=3) {  ## submit script provides two more arguments (output and source location)
+if(length(args)!=2) {  ## submit script provides two more arguments (output and source location)
 stop("Provide (only) signal strength for the analysis", call.=F)
 }
 
