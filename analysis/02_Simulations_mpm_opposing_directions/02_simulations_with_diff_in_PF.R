@@ -19,7 +19,7 @@ stop("Provide (only) signal strength for the analysis", call.=F)
 
 i = as.numeric(args[1])
 source_file <- args[2]
-output_dir <- "/gpfs1/data/lagged/results/02_Simulations_mpm_same_directions/"
+output_dir <- "/gpfs1/data/lagged/results/02_Simulations_mpm_opposing_directions/"
 
 print(paste("signal strength =", i))
 print(paste("source file =", source_file))
@@ -81,16 +81,16 @@ mpm <- function(survival, growth, reproduction,
 ## Run simulations ----------------------------------------
 
 # Get create_seq(), st.lamb(), n_it and set up parallel. Source lines from 01 folder
-print("Getting create_seq(), st.lamb(), n_it and set up parallel")
-source_lines(source_file, c(24:55, 109:147))
+#print("Getting create_seq(), st.lamb(), n_it and set up parallel")
+#source_lines(source_file, c(24:55, 109:147))
 
 # Create climate sequences
-print("creating temporal sequences")
-source_lines(source_file, c(204:207))
+#print("creating temporal sequences")
+#source_lines(source_file, c(204:207))
 
 # Run simulations for U and F matrix
-print("running simulations")
-source_lines(source_file, c(251:293))
+#print("running simulations")
+#source_lines(source_file, c(251:293))
 
 
 
@@ -116,6 +116,7 @@ lagf <- lagpf_df %>% filter(type != "Fmatrix") %>%
   geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)), position = position_dodge(width = 0.1))+ 
   labs(subtitle = "Opposing directional response of submatrices to climate driver") +
   ylab("stochastic log lambda") + xlab("SD of environmental sequence") + 
+  ylim(-0.6,-0.1)+
   facet_grid(cols = vars(auto_cat), labeller = labeller(auto_cat = label_auto)) + 
   scale_colour_manual(name = "Simulation type",
                       values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
@@ -137,6 +138,7 @@ pos_plot <- pos %>% filter(type != "Fmatrix") %>%
   geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)), position = position_dodge(width = 0.1))+ 
   labs(subtitle = "Same directional response of submatrices to climate driver") +
   ylab("stochastic log lambda") + xlab("SD of environmental sequence") + 
+  ylim(-0.6,-0.1)+
   facet_grid(cols = vars(auto_cat), labeller = labeller(auto_cat = label_auto)) + 
   scale_colour_manual(name = "Simulation type",
                       values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),

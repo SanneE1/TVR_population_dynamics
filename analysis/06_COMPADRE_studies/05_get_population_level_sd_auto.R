@@ -9,7 +9,7 @@ library(boot)
 library(rstatix)
 set.seed(2)
 
-output_dir <- "/gpfs1/data/lagged/06_COMPADRE_studies/"
+output_dir <- "/gpfs1/data/lagged/results/06_COMPADRE_studies/"
 
 n_it=50000
 
@@ -97,6 +97,8 @@ species <- read.csv("/gpfs1/data/lagged/data/species_authors.csv") %>% filter(!i
 ### create main file/dataframe
 df <- left_join(species, climate)
 
+str(df)
+
 df$Pmean_c_0.05 <- NA
 df$Pmean_U_0.05 <- NA
 df$Sig_p_0.05 <- NA
@@ -141,6 +143,7 @@ load("/gpfs1/data/lagged/data/COMPADRE_v.6.21.1.0.RData")
 
 for(sp in c(1:nrow(df))) {
   
+  print(sp)
   if(is.na(df$prec_auto[sp])) next   ## if prec_auto is na, prec_sd, tmean_auto & tmean_sd are also na
   
   i = df$SpeciesAuthor[sp]
@@ -294,13 +297,19 @@ for(sp in c(1:nrow(df))) {
   
   
   ### Get differences in lambda between Ulagged and none for precipitation
+  rm( list = Filter( exists, c("df1", "test1", "test1b", "df2", "test2", "test2b") ) )
+
   df1 <- rbind(
     lapply(plag_u, function(x) x$df) %>% bind_rows() %>% mutate(type = "Umatrix"), 
     lapply(plag_n, function(x) x$df) %>% bind_rows() %>% mutate(type = "control")) %>% 
     filter(is.finite(lambda))
-  
-  df1 %>% group_by(sig.strength, type) %>% shapiro_test(lambda)
+str(df1)
+summary(df1)
+
+#  df1 %>% group_by(sig.strength, type) %>% shapiro_test(lambda)
+  print("test1")
   test1 <- df1 %>% group_by(sig.strength) %>% wilcox_test(lambda ~ type) %>% add_significance() 
+  print("test1b")
   test1b <- df1 %>% group_by(sig.strength, type) %>% get_summary_stats(lambda)
   df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j), c("Sig_p_0.05", "Sig_p_0.25", "Sig_p_0.50", "Sig_p_1")] <- round(test1$p, digits = 3)
   df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j), 
@@ -312,9 +321,13 @@ for(sp in c(1:nrow(df))) {
     lapply(tlag_u, function(x) x$df) %>% bind_rows() %>% mutate(type = "Umatrix"), 
     lapply(tlag_n, function(x) x$df) %>% bind_rows() %>% mutate(type = "control")) %>% 
     filter(is.finite(lambda))
+str(df2)
+summary(df2)
   
-  df2 %>% group_by(sig.strength, type) %>% shapiro_test(lambda)
+#  df2 %>% group_by(sig.strength, type) %>% shapiro_test(lambda)
+  print("test2")
   test2 <- df2 %>% group_by(sig.strength) %>% wilcox_test(lambda ~ type) %>% add_significance()
+  print("test2b")
   test2b <- df2 %>% group_by(sig.strength, type) %>% get_summary_stats(lambda)
   df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j), c("Sig_t_0.05", "Sig_t_0.25", "Sig_t_0.50", "Sig_t_1")] <- round(test2$p, digits = 3)
   df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j), 
