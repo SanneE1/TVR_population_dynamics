@@ -9,7 +9,7 @@ library(boot)
 library(rstatix)
 set.seed(2)
 
-output_dir <- "/gpfs1/data/lagged/results/06_COMPADRE_studies/"
+output_dir <- "results/06_COMPADRE_studies/"
 
 n_it=50000
 
@@ -92,7 +92,7 @@ climate <- read.csv("/gpfs1/data/lagged/data/All_populations.csv") %>%
             tmean_auto = acf(an_tmean, plot=F, na.action = na.pass)$acf[2])
 
 ### Load selected species
-species <- read.csv("/gpfs1/data/lagged/data/species_authors.csv") %>% filter(!is.na(Lat))
+species <- read.csv("data/species_authors.csv") %>% filter(!is.na(Lat))
 
 ### create main file/dataframe
 df <- left_join(species, climate)
@@ -139,7 +139,7 @@ df$cov_gf <- NA
 ### Run lambda simulations using matrices, sd and auto of specific populations
 ### 30 repetitions for 3 different climate signal strengths
 
-load("/gpfs1/data/lagged/data/COMPADRE_v.6.21.1.0.RData")
+load("data/COMPADRE_v.6.21.1.0.RData")
 
 for(sp in c(1:nrow(df))) {
   
@@ -297,16 +297,14 @@ for(sp in c(1:nrow(df))) {
   
   
   ### Get differences in lambda between Ulagged and none for precipitation
-  rm( list = Filter( exists, c("df1", "test1", "test1b", "df2", "test2", "test2b") ) )
-
   df1 <- rbind(
     lapply(plag_u, function(x) x$df) %>% bind_rows() %>% mutate(type = "Umatrix"), 
     lapply(plag_n, function(x) x$df) %>% bind_rows() %>% mutate(type = "control")) %>% 
     filter(is.finite(lambda))
-str(df1)
-summary(df1)
-
-#  df1 %>% group_by(sig.strength, type) %>% shapiro_test(lambda)
+  str(df1)
+  summary(df1)
+  
+  #  df1 %>% group_by(sig.strength, type) %>% shapiro_test(lambda)
   print("test1")
   test1 <- df1 %>% group_by(sig.strength) %>% wilcox_test(lambda ~ type) %>% add_significance() 
   print("test1b")
@@ -321,10 +319,10 @@ summary(df1)
     lapply(tlag_u, function(x) x$df) %>% bind_rows() %>% mutate(type = "Umatrix"), 
     lapply(tlag_n, function(x) x$df) %>% bind_rows() %>% mutate(type = "control")) %>% 
     filter(is.finite(lambda))
-str(df2)
-summary(df2)
+  str(df2)
+  summary(df2)
   
-#  df2 %>% group_by(sig.strength, type) %>% shapiro_test(lambda)
+  #  df2 %>% group_by(sig.strength, type) %>% shapiro_test(lambda)
   print("test2")
   test2 <- df2 %>% group_by(sig.strength) %>% wilcox_test(lambda ~ type) %>% add_significance()
   print("test2b")
@@ -332,6 +330,8 @@ summary(df2)
   df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j), c("Sig_t_0.05", "Sig_t_0.25", "Sig_t_0.50", "Sig_t_1")] <- round(test2$p, digits = 3)
   df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j), 
      c("Tmean_c_0.05", "Tmean_U_0.05", "Tmean_c_0.25", "Tmean_U_0.25", "Tmean_c_0.50", "Tmean_U_0.50", "Tmean_c_1", "Tmean_U_1")] <- round(test2b$mean, digits = 3)
+  
+  rm( list = Filter( exists, c("df1", "test1", "test1b", "df2", "test2", "test2b") ) )
   
   
   ### Get survival, growth and fecundity to calculate covariance of the vital rates
@@ -348,6 +348,7 @@ summary(df2)
   df$cov_sf[which(df$SpeciesAuthor == i & df$MatrixPopulation == j)] <- cov(gr, fe, use = "pairwise.complete.obs")
   df$cov_gf[which(df$SpeciesAuthor == i & df$MatrixPopulation == j)] <- cov(su, fe, use = "pairwise.complete.obs")
   
+  rm( list = Filter( exists, c("gr", "su", "fe", "u_mat", "f_mat") ) )
   
   ### Set up dataframe for lambda plots
   plot_df <- rbind(
@@ -386,6 +387,7 @@ summary(df2)
   ggsave(file.path(output_dir, paste0("lambda_comparison_", i, "_", j, ".tiff")), plot = plot,
          width = 5.5, height = 6.5)
   
+  rm( list = Filter( exists, c("plot_df", "plot", "facet_text") ) )
   
   
   
@@ -501,7 +503,7 @@ summary(df2)
     geom_histogram(data = U0.5, aes(x = value, y = -stat(width*density), fill = "Simulated")) +
     facet_wrap(vars(cell), scales = "free", dir = "v") +
     scale_y_continuous(labels = scales::percent_format()) + labs(title = "Observed vs. simulated matrix cell values" ,
-                                                         subtitle = paste(i, j), fill = "U matrix cell values") +
+                                                                 subtitle = paste(i, j), fill = "U matrix cell values") +
     ylab("") + xlab("cell value") + theme(legend.position = "bottom")
   
   valuesFobs <- ggplot() +
@@ -509,7 +511,7 @@ summary(df2)
     geom_histogram(data = F0.5, aes(x = value, y = -stat(width*density), fill = "Simulated")) +
     facet_wrap(vars(cell), scales = "free", dir = "v") +
     scale_y_continuous(labels = scales::percent_format()) + labs(title = "Observed vs. simulated F matrix cell values" ,
-                                                         subtitle = paste(i, j), fill = "F matrix cell values") +
+                                                                 subtitle = paste(i, j), fill = "F matrix cell values") +
     ylab("") + xlab("cell value") + theme(legend.position = "bottom")
   
   
@@ -529,6 +531,10 @@ summary(df2)
   print(valuesFsig)
   
   dev.off()
+  
+  rm( list = Filter( exists, c("valuesUobs", "valuesFobs", "sds", "valuesUsig", "valuesFsig", "Uobs", "Fobs", "actual_sd",
+                               "U1", "U0.5", "F1", "F0.5", "matsF", "matsU") ) )
+  
   
 }
 
