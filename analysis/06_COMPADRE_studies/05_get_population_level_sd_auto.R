@@ -9,7 +9,7 @@ library(boot)
 library(rstatix)
 set.seed(2)
 
-output_dir <- "/gpfs1/data/lagged/results/06_COMPADRE_studies/"
+output_dir <- "results/06_COMPADRE_studies/"
 
 n_it=50000
 
@@ -75,7 +75,7 @@ st.lamb <- function(env_U, env_F,
 
 
 ### Get the climate sd and autocorrelation for the populations with Lat/Lon
-climate <- read.csv("/gpfs1/data/lagged/data/All_populations.csv") %>% 
+climate <- read.csv("data/All_populations.csv") %>% 
   pivot_wider(values_from = value, names_from = variable) %>%
   mutate(tmean = (tmin + tmax)/2) %>%
   group_by(SpeciesAuthor, MatrixPopulation, month) %>%
@@ -92,7 +92,7 @@ climate <- read.csv("/gpfs1/data/lagged/data/All_populations.csv") %>%
             tmean_auto = acf(an_tmean, plot=F, na.action = na.pass)$acf[2])
 
 ### Load selected species
-species <- read.csv("/gpfs1/data/lagged/data/species_authors.csv") %>% filter(!is.na(Lat))
+species <- read.csv("data/species_authors.csv") %>% filter(!is.na(Lat))
 
 ### create main file/dataframe
 df <- left_join(species, climate)
@@ -139,7 +139,7 @@ df$cov_gf <- NA
 ### Run lambda simulations using matrices, sd and auto of specific populations
 ### 30 repetitions for 3 different climate signal strengths
 
-load("/gpfs1/data/lagged/data/COMPADRE_v.6.21.1.0.RData")
+load("data/COMPADRE_v.6.21.1.0.RData")
 
 for(sp in c(1:nrow(df))) {
   
@@ -235,7 +235,7 @@ for(sp in c(1:nrow(df))) {
   # Run simulations for precipitation
   #-----------------------------------------------------------
   # Set up parallel runs
-  cl <- makeForkCluster(outfile = "")
+  cl <- makeCluster(8)
   
   ## export libraries to workers
   clusterEvalQ(cl, c(library(popbio), library(tidyverse), library(purrr), library(boot)))
