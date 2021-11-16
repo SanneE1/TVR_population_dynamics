@@ -114,7 +114,7 @@ lagf <- lagpf_df %>% filter(type != "Fmatrix") %>%
   ggplot(.) + 
   geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)), se = F)+ 
   geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)), position = position_dodge(width = 0.1))+ 
-  labs(subtitle = "Opposing directional response of submatrices to climate driver") +
+  labs(title = "Opposing directional response of submatrices to climate driver") +
   ylab("stochastic log lambda") + xlab("SD of environmental sequence") + 
   ylim(-0.6,-0.1)+
   facet_grid(cols = vars(auto_cat), labeller = labeller(auto_cat = label_auto)) + 
@@ -136,7 +136,7 @@ pos_plot <- pos %>% filter(type != "Fmatrix") %>%
   ggplot(.) + 
   geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(type)), se = F)+ 
   geom_point(aes(x = clim_sd, y = lambda, colour = as.factor(type)), position = position_dodge(width = 0.1))+ 
-  labs(subtitle = "Same directional response of submatrices to climate driver") +
+  labs(title = "Same directional response of submatrices to climate driver") +
   ylab("stochastic log lambda") + xlab("SD of environmental sequence") + 
   ylim(-0.6,-0.1)+
   facet_grid(cols = vars(auto_cat), labeller = labeller(auto_cat = label_auto)) + 
@@ -145,7 +145,10 @@ pos_plot <- pos %>% filter(type != "Fmatrix") %>%
                       labels = c("none" = "control", "Umatrix" = "MCD")) + theme_minimal() +
   theme(legend.position = "bottom")
 
-plot <- (pos_plot / lagf ) + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+plot <- (pos_plot / lagf ) + 
+  plot_layout(guides = "collect") + plot_annotation(tag_levels = "A") & 
+  theme(legend.position = "bottom")
 
-ggsave(filename = file.path(output_dir, paste0("Comparison_plot_", i, ".png")), plot)
+ggsave(filename = file.path(output_dir, paste0("Comparison_plot_", i, ".png")), plot,
+       width = 6, height = 6)
 
