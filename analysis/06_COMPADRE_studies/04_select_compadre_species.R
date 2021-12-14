@@ -7,6 +7,7 @@ load("data/COMPADRE_v.6.21.1.0.RData")
 
 # With these criteria there are no annual species
 multiple_Ind <- compadre$metadata %>%
+  filter(str_detect(compadre$metadata$Observation, "FRANK", negate = TRUE) | is.na(compadre$metadata$Observations)) %>%
   filter(MatrixComposite == "Individual" & 
            MatrixSplit == "Divided" &
            MatrixFec == "Yes",
