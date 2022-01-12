@@ -1,7 +1,7 @@
 
 
 
-output_dir <- "results/06_COMPADRE_studies/actual_sd_auto/"
+output_dir <- "results/05_COMPADRE_studies/"
 df <- read.csv(file.path(output_dir, "species_information.csv"))
 
 files <- list.files(file.path(output_dir, "rds"), full.names = T)

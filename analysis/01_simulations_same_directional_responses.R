@@ -1,4 +1,14 @@
+#
+# Script to run the main simulations on effect of both lagged and recent responses to climate 
+# in a matrix population model, where climate responses are in the SAME direction
+#
+# This script includes arguments so it can be submitted on the UFZ HPC "EVE"
+# Also see "submit_simulation.sh" in the same folder for the job submission script
+
 rm(list=ls())
+
+set.seed(2)
+
 library(dplyr)
 library(tidyr)
 library(popbio)
@@ -6,29 +16,36 @@ library(parallel)
 library(ggplot2)
 library(faux)
 library(boot)
-set.seed(2)
 
+# Get required arguments supplied during job submission
 args = commandArgs(trailingOnly = T)
 
 if(length(args)!=2) {
   stop("Provide (only) signal strength for the analysis", call.=F)
 }
 
-
+# Set the proportion of variance (p) explained by the climate driver in the temporal sequence.
+# Here set to 1, 0.5, 0.25 or 0.05. See manuscript for more info
 i = as.numeric(args[1])
+
+# Where to save the output
 output_dir <- args[2]
 
+# Print information for the log file
 print(paste("sig.strength =", i))
 print(paste("output dir =", output_dir))
 
+# Number of iterations to run the simulations
 n_it = 50000
 print(paste("#iterations =", n_it))
 
 # Create function that creates environmental sequence ------------------------------------------------------------------------------------
-### creates a sequence of climate anomalies whith a specified standard deviation and autocorrelation.
-### the function then creates another sequence of the same length and standard deviation, to be used as random noise
-### of each sequence two vectors are created, one which is the "original" and a second, which is offset by a specified period
-### to create a lagged sequence
+
+## Creates a sequence of climate anomalies (c in manuscript) with a specified standard deviation and autocorrelation.
+## The function then creates another sequence of the same length and standard deviation, to be used as random noise.
+## Next the two vectors are combined in two dataframes, one which is the original (and recent) dataframe and a second, 
+## which is offset by a specified period to create a lagged sequence
+
 create_seq <- function(n_it, clim_sd, clim_auto, lag) { 
   for(n in c(1:(n_it+lag))){ 
     if(n == 1) {
@@ -54,10 +71,9 @@ create_seq <- function(n_it, clim_sd, clim_auto, lag) {
 }
 
 # Function to create MPM for each iteration. ------------------------------------------------------------------------------------
-### This function takes SINGLE variables for the 3 climate drivers and 3 random noise values. 
-### Using the method of moments, this function creates distribution of specified mean and sd values for each of the 3 vital rates. 
-### The climate driver and the random noise for each VR are added to create a "deviation value". p calculates the probability of this "deviation value".
-### We take that probability to calculate a value in the VR distributions
+
+## This function creates a single matrix population model (MPM) based on the climate & random values given for each of the vital rates 
+## Given the vital rate means and sds, as well as the climate sd, this function calculates the MPM cell values, using the method of moments 
 
 mpm <- function(survival, growth, reproduction, 
                 clim_sd, sig.strength) {
@@ -108,6 +124,7 @@ mpm <- function(survival, growth, reproduction,
 
 # Function to create a MPM sequence from supplied climate and noise sequences and calculate stocastic lambda -----------------------------------
 
+## This function will create a MPM for each iteration of the environmental sequence, and calculate the stochastic lambda of said MPM sequence 
 st.lamb <- function(env_surv, env_growth, env_reproduction, 
                     clim_sd, clim_auto, sig.strength) {
   
@@ -132,121 +149,27 @@ st.lamb <- function(env_surv, env_growth, env_reproduction,
                 `colnames<-`(c("1,1", "2,1", "1,2", "2,2"))))
 }
 
-# Set up parallel runs
-cl <- makeForkCluster(outfile = "")
-## export libraries to workers
-suppressMessages(clusterEvalQ(cl, c(library(popbio), library(dplyr), library(purrr))))
+#---------------------------------------------------------------------------------------------------------
+# Start of analyses
+#---------------------------------------------------------------------------------------------------------
 
-
-### autocorrelation in growth
+## set up sequences of climate standard deviation and autocorrelation values so that there are 30 duplicates 
+## for each combination of sd & autocorrelation value
 clim_sd <- rep(seq(from = 0.01, to = 2, length.out = 10), 90)
 clim_auto <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
 
-## export objects to workers
+# Set up parallel runs
+cl <- makeForkCluster(outfile = "")
+suppressMessages(clusterEvalQ(cl, c(library(popbio), library(dplyr), library(purrr))))
+
+# export objects to workers
 suppressMessages(clusterExport(cl, c("i", "create_seq", "inv.logit", "mpm", "st.lamb", "clim_auto", "clim_sd", "n_it")))
 
-
-auto <- parLapplyLB(cl = cl,
-                  as.list(c(1:900)),
-                  function(x) st.lamb(env_surv = create_seq(n_it = n_it, clim_sd[x], clim_auto[x], 0)[["recent"]],
-                                      env_growth = create_seq(n_it = n_it, clim_sd[x], clim_auto[x], 0)[["recent"]],
-                                      env_reproduction = data.frame(clim = rep(NA, n_it),
-                                                                    ran = rep(NA, n_it)),
-                                      clim_sd = clim_sd[x],
-                                      clim_auto = clim_auto[x],
-                                      sig.strength = i)
-)
-
-print("done w/ auto")
-
-saveRDS(auto, file.path(output_dir, paste("mpm_", i, "_auto.RDS", sep = "")))
-
-
-
-### Covariance all U vr
-cov_clim <- function(x) {
-  clim = rnorm_multi(n = n_it,
-                     vars = 2,
-                     mu = c(0,0),
-                     sd = clim_sd[x],
-                     r = clim_auto[x],
-                     varnames = c("surv", "growth"))
-  ran = rnorm(n = n_it, mean = 0, sd = clim_sd[x])
-  
-  df <- list(surv = data.frame(clim = clim$surv,
-                               ran = ran),
-             growth = data.frame(clim = clim$growth,
-                                 ran = ran))
-  return(df)
-}
-
-clim <- lapply(as.list(c(1:900)), cov_clim)
-
-clusterExport(cl, c("clim"))
-
-cov <- parLapplyLB(cl = cl,
-                 clim,
-                 function(x) tryCatch(st.lamb(env_surv = x[["surv"]],
-                                              env_growth = x[["growth"]],
-                                              env_reproduction = data.frame(clim = rep(NA, n_it),
-                                                                            ran = rep(NA, n_it)),
-                                              clim_sd = sd(x[["surv"]]$clim),
-                                              clim_auto = cor(x[["surv"]]$clim, x[["growth"]]$clim),
-                                              sig.strength = i),
-                                      error=function(err) NA)
-)
-
-print("done w/ cov")
-
-saveRDS(cov, file.path(output_dir, paste("mpm_", i, "_cov.RDS", sep = "")))
-
-
 #### Create main temporal sequences
-lag_clim <- lapply(as.list(c(1:900)), function(x) create_seq(n_it, clim_sd = clim_sd[x], clim_auto = clim_auto[x], lag = 1))
+lag_clim <- parLapplyLB(cl = cl,
+                        as.list(c(1:900)), 
+                        function(x) create_seq(n_it, clim_sd = clim_sd[x], clim_auto = clim_auto[x], lag = 1))
 suppressMessages(clusterExport(cl, c("lag_clim")))
-
-#### Lagged effect within U matrix
-lag_g <- parLapplyLB(cl = cl,
-                   lag_clim,
-                   function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
-                                                env_growth = x[["lagged"]],
-                                                env_reproduction = data.frame(clim = rep(NA, n_it),
-                                                                              ran = rep(NA, n_it)),
-                                                clim_sd = sd(x[["recent"]]$clim, na.rm = T),
-                                                clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
-                                                sig.strength = i),
-                                        error=function(err) NA)
-)
-
-lag_s <- parLapplyLB(cl = cl,
-                   lag_clim,
-                   function(x) tryCatch(st.lamb(env_surv = x[["lagged"]],
-                                                env_growth = x[["recent"]],
-                                                env_reproduction = data.frame(clim = rep(NA, n_it),
-                                                                              ran = rep(NA, n_it)),
-                                                clim_sd = sd(x[["recent"]]$clim, na.rm = T),
-                                                clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
-                                                sig.strength = i),
-                                        error=function(err) NA)
-)
-
-lag_n <- parLapplyLB(cl = cl,
-                   lag_clim,
-                   function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
-                                                env_growth = x[["recent"]],
-                                                env_reproduction = data.frame(clim = rep(NA, n_it),
-                                                                              ran = rep(NA, n_it)),
-                                                clim_sd = sd(x[["recent"]]$clim, na.rm = T),
-                                                clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
-                                                sig.strength = i),
-                                        error=function(err) NA)
-)
-
-lag <- list("growth" = lag_g, "survival" = lag_s, "none" = lag_n)
-
-print("done w/ s/g sim")
-
-saveRDS(lag, file.path(output_dir, paste("mpm_", i, "_lag.RDS", sep = "")))
 
 #### Lagged effect between U & F matrices
 lag_p <- parLapplyLB(cl = cl,

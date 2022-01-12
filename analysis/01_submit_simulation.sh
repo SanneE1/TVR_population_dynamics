@@ -16,7 +16,7 @@
 #SBATCH --cpus-per-task=25
  
 # create output direcotry per job
-OUTPUT_PATH="/gpfs1/data/lagged/results/01_Simulations_mpm_same_direction/rds"
+OUTPUT_PATH="/gpfs1/data/lagged/results/01_Simulations_mpm_same_direction"
 
 # Load modules
 module load foss/2019b R/4.0.0-2
@@ -25,6 +25,6 @@ sigstrength=$1
 
 export MC_CORES=${SLURM_CPUS_PER_TASK:-1}
  
-Rscript "$HOME"/lagged_buffering/analysis/01_Simulations_mpm_same_direction/simulate_mpm.R \
+Rscript "$HOME"/lagged_buffering/analysis/01_simulations_same_directional_responses.R \
 "$sigstrength" \
 "$OUTPUT_PATH"

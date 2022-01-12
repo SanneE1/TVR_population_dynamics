@@ -19,10 +19,10 @@
 module load foss/2019b R/4.0.0-2
 
 sigstrength=$1
-sourcefile="$HOME/lagged_buffering/analysis/01_Simulations_mpm_same_direction/simulate_mpm.R"
+output_dir="/gpfs1/data/lagged/results/02_Simulations_mpm_opposing_directions"
 
 export MC_CORES=${SLURM_CPUS_PER_TASK:-1}
  
-Rscript "$HOME"/lagged_buffering/analysis/02_Simulations_mpm_opposing_directions/02_simulations_with_diff_in_PF.R \
+Rscript "$HOME"/lagged_buffering/analysis/02_simulations_opposing_directional_responses \
 "$sigstrength" \
-"$sourcefile"
+"output_dir"
