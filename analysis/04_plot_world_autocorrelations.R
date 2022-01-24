@@ -59,10 +59,10 @@ plot2 <- temp_plot / precip_plot +
   plot_annotation(tag_levels = "A") &
   theme(legend.position = "bottom")
 
-ggsave(plot2, filename = "results/autocorrelation_temp_precip.png",
-       width = 9, height = 10)
 
-
-
+png(filename = file.path("results", "autocorrelation_temp_precip.png"), type = "cairo", 
+    width = 9, height = 9, units = "in", res = 600)
+print(plot2)
+dev.off()
 
 
