@@ -89,7 +89,7 @@ st.lamb <- function(env_U, env_F,
 
 
 # Get the climate sd and autocorrelation for the populations with Lat/Lon
-climate <- read.csv("data/All_populations.csv") %>% 
+climate <- read.csv("/gpfs1/data/lagged/data/All_populations.csv") %>% 
   pivot_wider(values_from = value, names_from = variable) %>%
   mutate(tmean = (tmin + tmax)/2) %>%
   group_by(SpeciesAuthor, MatrixPopulation, month) %>%
@@ -106,7 +106,7 @@ climate <- read.csv("data/All_populations.csv") %>%
             tmean_auto = acf(an_tmean, plot=F, na.action = na.pass)$acf[2])
 
 # Load selected species
-species <- read.csv("data/species_authors.csv") %>% filter(!is.na(Lat))
+species <- read.csv("/gpfs1/data/lagged/data/species_authors.csv") %>% filter(!is.na(Lat))
 
 # Create species summary file with empty columns to be filled in for loop
 df <- left_join(species, climate)
@@ -148,7 +148,7 @@ df$cov_sf <- NA
 df$cov_gf <- NA
 
 # Load compadre data file
-load("data/COMPADRE_v.6.21.1.0.RData")
+load("/gpfs1/data/lagged/data/COMPADRE_v.6.21.1.0.RData")
 
 for(sp in c(1:nrow(df))) {
   
@@ -291,7 +291,6 @@ for(sp in c(1:nrow(df))) {
                                             sig.strength = unique(x$sig.strength))
   )
 
-
   tlag_n <- parLapplyLB(cl = cl,
                         lag_temp,
                         function(x) st.lamb(env_U = x[["recent"]],
@@ -300,9 +299,6 @@ for(sp in c(1:nrow(df))) {
                                             clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                             sig.strength = unique(x$sig.strength))
   )
-
-  stopCluster(cl)
-
   save(plag_u, plag_n, tlag_u, tlag_n, file = file.path(output_dir, "rds", paste0("simulations_", i,"_", j, ".RData")))
   rm( list = Filter( exists, c("df1", "test1", "test1b", "df2", "test2", "test2b") ) )
 
@@ -410,7 +406,6 @@ for(sp in c(1:nrow(df))) {
                   (((Ucell_values$mean*(1-Ucell_values$mean))/(Ucell_values$sd * clim_sd)^2) - 1) * (1 - Ucell_values$mean))
     Umat <- as.data.frame(t(Umat))
     colnames(Umat) <- c(1:dim^2)
-
     return(Umat)
   }
 
@@ -423,7 +418,6 @@ for(sp in c(1:nrow(df))) {
                    (Fcell_values$mean)/(Fcell_values$sd * clim_sd)^2) %>% replace_na(., 0)
     Fmat <- as.data.frame(t(Fmat))
     colnames(Fmat) <- c(1:dim^2)
-
     return(Fmat)
   }
 
@@ -438,7 +432,6 @@ for(sp in c(1:nrow(df))) {
     mutate(cell = as.integer(gsub("X", "", cell)),
            matrix = "U",
            sig.strength = 1)
-
 
   U0.5 <- parLapplyLB(cl,
                       split(lag_prcp[[n0.5]][["recent"]], seq(nrow(lag_prcp[[n0.5]][["recent"]]))), function(x)
@@ -490,7 +483,6 @@ for(sp in c(1:nrow(df))) {
     facet_wrap(vars(cell), scales = "free", dir = "v") +
     theme(legend.position = "bottom") + scale_fill_discrete(name = "", labels = c("Observed sd", "Simulated sd"))
 
-
   ## sd distributions with different sig.strengths
   valuesUsig <- ggplot() +
     geom_histogram(data = U1, aes(x = value, y = stat(width*density), fill = factor(sig.strength))) +
@@ -523,13 +515,11 @@ for(sp in c(1:nrow(df))) {
                                                          subtitle = paste(i, j), fill = "F matrix cell values") +
     ylab("") + xlab("cell value") + theme(legend.position = "bottom")
 
-
   if(is.na(j)) {
     filename = file.path(output_dir, paste0("cell_values_", i, "_plots.pdf"))
   } else{
     filename = file.path(output_dir, paste0("cell_values_", i, "_", j, "_plots.pdf"))
   }
-
 
   pdf(filename)
 
