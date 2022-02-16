@@ -57,7 +57,7 @@ mpm <- function(survival, growth, reproduction,
     mpm[2,1] <- g_mean
   } else {
     ## total deviation from mean = climate signal * signal strength & correction factor (partitioning at variance scale) + random noise * signal strength
-    dev <- growth$clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
+    dev <- growth * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
       rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
     ## Because of partitioning and correction factor above, the resulting distribution has a sd of clim_sd
     p <- pnorm(dev, mean = 0, sd = clim_sd)
@@ -71,7 +71,7 @@ mpm <- function(survival, growth, reproduction,
   if(is.na(survival)) {
     mpm[2,2] <- s_mean
   } else {
-    dev <- survival$clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- survival * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
     p <- pnorm(dev, mean = 0, sd = clim_sd)
     mpm[2,2] <- qbeta(p, (((s_mean*(1-s_mean))/(s_sd * clim_sd)^2) - 1) * s_mean,
                       (((s_mean*(1-s_mean))/(s_sd * clim_sd)^2) - 1) * (1 - s_mean))
@@ -83,7 +83,7 @@ mpm <- function(survival, growth, reproduction,
   if(is.na(reproduction)) {
     mpm[1,2] <- f_mean
   } else {
-    dev <- (-reproduction$clim) * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- (-reproduction) * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
     p <- pnorm(dev, mean = 0, sd = clim_sd)
     mpm[1,2] <- qgamma(p, (f_mean^2)/(f_sd * clim_sd)^2, (f_mean)/(f_sd * clim_sd)^2)
   }
