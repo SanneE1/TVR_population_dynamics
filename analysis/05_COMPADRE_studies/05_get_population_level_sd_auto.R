@@ -46,19 +46,14 @@ create_seq <- function(n_it, clim_sd, clim_auto, sig.strength, lag = 1) {
     }
   }
   seq <- scale(seq) * clim_sd
-  ran <- rnorm(n_it + lag, mean = 0, sd = clim_sd)
-  
+
   lagged <- c(rep(NA, lag), seq)
-  lagged_ran <- c(rep(NA, lag), ran)
-  
+
   recent <- c(seq, rep(NA, lag))
-  recent_ran <- c(ran, rep(NA, lag))
-  
-  df <- list(recent = data.frame(clim = recent,
-                                 ran = recent_ran),
-             lagged = data.frame(clim = lagged,
-                                 ran = lagged_ran),
-             sig.strength = sig.strength)
+
+  df <- data.frame(recent = recent,
+                   lagged = lagged,
+                   sig.strength = sig.strength)
   return(df)
 }
 
@@ -67,10 +62,10 @@ create_seq <- function(n_it, clim_sd, clim_auto, sig.strength, lag = 1) {
 st.lamb <- function(env_U, env_F, 
                     clim_sd, clim_auto, sig.strength) {
   
-  n_it = length(env_U[,1])
+  n_it = length(env_U)
   
-  env <- list(U_clim = lapply(as.list(1:n_it), function(x) env_U[x[1],]),
-              F_clim = lapply(as.list(1:n_it), function(x) env_F[x[1],]),
+  env <- list(U_clim = env_U,
+              F_clim = env_F,
               clim_sd = clim_sd,
               sig.strength = sig.strength)
   
@@ -84,8 +79,8 @@ st.lamb <- function(env_U, env_F,
                    sig.strength = sig.strength)
   
   
-  return(list(df = df,
-              mats = NA)) #sapply(mats, as.vector) %>% t))
+  return(df = df,
+              mats = NA) #sapply(mats, as.vector) %>% t))
 }
 
 
@@ -211,16 +206,16 @@ for(sp in c(14:nrow(df))) {
   #-----------------------------------------------------------
   mpm <- function(U_clim, F_clim, sig.strength, clim_sd) {
 
-    devU <- U_clim$clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) +
-      U_clim$ran * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
+    devU <- U_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) +
+      rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
     pU <- pnorm(devU, mean = 0, sd = clim_sd)
     Umat <- qbeta(pU,
                   (((Ucell_values$mean*(1-Ucell_values$mean))/(Ucell_values$sd * clim_sd)^2) - 1) * Ucell_values$mean,
                   (((Ucell_values$mean*(1-Ucell_values$mean))/(Ucell_values$sd * clim_sd)^2) - 1) * (1 - Ucell_values$mean)) %>%
       replace_na(., 0)
 
-    devF <- F_clim$clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) +
-      F_clim$ran * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
+    devF <- F_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) +
+      rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
     pF <- pnorm(devF, mean = 0, sd = clim_sd)
     Fmat <- qgamma(pF,
                    (Fcell_values$mean^2)/(Fcell_values$sd * clim_sd)^2,
@@ -262,17 +257,17 @@ for(sp in c(14:nrow(df))) {
   print("run prcp")
   plag_u <- parLapplyLB(cl = cl,
                         lag_prcp,
-                        function(x) st.lamb(env_U = x[["lagged"]],
-                                            env_F = x[["recent"]],
+                        function(x) st.lamb(env_U = x$lagged,
+                                            env_F = x$recent,
                                             clim_sd = 1,
                                             clim_auto = df$prec_auto[sp],
-                                            sig.strength = x$sig.strength)
+                                            sig.strength = unique(x$sig.strength))
   )
 
   plag_n <- parLapplyLB(cl = cl,
                         lag_prcp,
-                        function(x) st.lamb(env_U = x[["recent"]],
-                                            env_F = x[["recent"]],
+                        function(x) st.lamb(env_U = x$recent,
+                                            env_F = x$recent,
                                             clim_sd = 1,
                                             clim_auto = df$prec_auto[sp],
                                             sig.strength = unique(x$sig.strength))
@@ -286,8 +281,8 @@ for(sp in c(14:nrow(df))) {
 
   tlag_u <- parLapplyLB(cl = cl,
                         lag_temp,
-                        function(x) st.lamb(env_U = x[["lagged"]],
-                                            env_F = x[["recent"]],
+                        function(x) st.lamb(env_U = x$lagged,
+                                            env_F = x$recent,
                                             clim_sd = 1,
                                             clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                             sig.strength = unique(x$sig.strength))
@@ -295,8 +290,8 @@ for(sp in c(14:nrow(df))) {
 
   tlag_n <- parLapplyLB(cl = cl,
                         lag_temp,
-                        function(x) st.lamb(env_U = x[["recent"]],
-                                            env_F = x[["recent"]],
+                        function(x) st.lamb(env_U = x$recent,
+                                            env_F = x$recent,
                                             clim_sd = 1,
                                             clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                             sig.strength = unique(x$sig.strength))
@@ -404,7 +399,7 @@ print("start tests")
 
   ## Get all Umat and Fmat values
   matsU <- function(U_clim, clim_sd = 1, sig.strength) {
-    devU <- U_clim$clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) +
+    devU <- U_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) +
       U_clim$ran * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
     pU <- pnorm(devU, mean = 0, sd = clim_sd)
     Umat <- qbeta(pU,
@@ -416,7 +411,7 @@ print("start tests")
   }
 
   matsF <- function(F_clim, clim_sd = 1, sig.strength) {
-    devF <- F_clim$clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) +
+    devF <- F_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) +
       F_clim$ran * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
     pF <- pnorm(devF, mean = 0, sd = clim_sd)
     Fmat <- qgamma(pF,
@@ -431,7 +426,7 @@ print("start tests")
   
   ## Set up dataframes to compare simulated cell values to observed
   U1 <- parLapplyLB(cl,
-                    split(lag_prcp[[n1]][["recent"]], seq(nrow(lag_prcp[[n1]][["recent"]]))), function(x)
+                    split(lag_prcp[[n1]]$recent, seq(nrow(lag_prcp[[n1]]$recent))), function(x)
     matsU(U_clim = x, sig.strength = lag_prcp[[n1]][["sig.strength"]])) %>%
     bind_rows %>%
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
@@ -440,7 +435,7 @@ print("start tests")
            sig.strength = 1)
 
   U0.5 <- parLapplyLB(cl,
-                      split(lag_prcp[[n0.5]][["recent"]], seq(nrow(lag_prcp[[n0.5]][["recent"]]))), function(x)
+                      split(lag_prcp[[n0.5]]$recent, seq(nrow(lag_prcp[[n0.5]]$recent))), function(x)
     matsU(U_clim = x, sig.strength = lag_prcp[[n1]][["sig.strength"]])) %>%
     bind_rows %>%
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
@@ -449,7 +444,7 @@ print("start tests")
            sig.strength = 0.5)
 
   F1 <- parLapplyLB(cl,
-                    split(lag_prcp[[n1]][["recent"]], seq(nrow(lag_prcp[[n1]][["recent"]]))), function(x)
+                    split(lag_prcp[[n1]]$recent, seq(nrow(lag_prcp[[n1]]$recent))), function(x)
     matsF(F_clim = x, sig.strength = lag_prcp[[n1]][["sig.strength"]]))%>%
     bind_rows %>%
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
@@ -458,7 +453,7 @@ print("start tests")
            sig.strength = 1)
 
   F0.5 <- parLapplyLB(cl,
-                      split(lag_prcp[[n0.5]][["recent"]], seq(nrow(lag_prcp[[n0.5]][["recent"]]))), function(x)
+                      split(lag_prcp[[n0.5]]$recent, seq(nrow(lag_prcp[[n0.5]]$recent))), function(x)
     matsF(F_clim = x, sig.strength = lag_prcp[[n1]][["sig.strength"]])) %>% bind_rows %>%
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
     mutate(cell = as.integer(gsub("X", "", cell)),

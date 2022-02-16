@@ -16,6 +16,7 @@ library(parallel)
 library(ggplot2)
 library(faux)
 library(boot)
+library(purrr)
 
 # Get required arguments supplied during job submission
 args = commandArgs(trailingOnly = T)
@@ -55,18 +56,13 @@ create_seq <- function(n_it, clim_sd, clim_auto, lag) {
     }
   }
   seq <- scale(seq) * clim_sd
-  ran <- rnorm(n_it + lag, mean = 0, sd = clim_sd)
-  
+
   lagged <- c(rep(NA, lag), seq)
-  lagged_ran <- c(rep(NA, lag), ran)
-  
+
   recent <- c(seq, rep(NA, lag))
-  recent_ran <- c(ran, rep(NA, lag))
-  
-  df <- list(recent = data.frame(clim = recent,
-                                 ran = recent_ran),
-             lagged = data.frame(clim = lagged,
-                                 ran = lagged_ran))
+
+  df <- data.frame(recent = recent,
+                   lagged = lagged)
   return(df)
 }
 
@@ -84,12 +80,12 @@ mpm <- function(survival, growth, reproduction,
   g_mean = 0.325
   g_sd = 0.118
   
-  if(is.na(growth$clim)) {
+  if(is.na(growth)) {
     mpm[2,1] <- g_mean  
   } else {
     ## total deviation from mean = climate signal * signal strength & correction factor (partitioning at variance scale) + random noise * signal strength
-    dev <- growth$clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
-      growth$ran * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- growth * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
+      rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
     ## Because of partitioning and correction factor above, the resulting distribution has a sd of clim_sd
     p <- pnorm(dev, mean = 0, sd = clim_sd) 
     mpm[2,1] <- qbeta(p, (((g_mean*(1-g_mean))/(g_sd * clim_sd)^2) - 1) * g_mean,
@@ -99,10 +95,10 @@ mpm <- function(survival, growth, reproduction,
   # survival
   s_mean = 0.541
   s_sd = 0.135
-  if(is.na(survival$clim)) {
+  if(is.na(survival)) {
     mpm[2,2] <- s_mean
   } else {
-    dev <- survival$clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + survival$ran * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- survival * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
     p <- pnorm(dev, mean = 0, sd = clim_sd) 
     mpm[2,2] <- qbeta(p, (((s_mean*(1-s_mean))/(s_sd * clim_sd)^2) - 1) * s_mean,
                       (((s_mean*(1-s_mean))/(s_sd * clim_sd)^2) - 1) * (1 - s_mean))
@@ -111,10 +107,10 @@ mpm <- function(survival, growth, reproduction,
   # reproduction 
   f_mean = 0.788
   f_sd = 0.862
-  if(is.na(reproduction$clim)) {
+  if(is.na(reproduction)) {
     mpm[1,2] <- f_mean
   } else {
-    dev <- reproduction$clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + reproduction$ran * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- reproduction * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
     p <- pnorm(dev, mean = 0, sd = clim_sd) 
     mpm[1,2] <- qgamma(p, (f_mean^2)/(f_sd * clim_sd)^2, (f_mean)/(f_sd * clim_sd)^2)
   }
@@ -128,25 +124,25 @@ mpm <- function(survival, growth, reproduction,
 st.lamb <- function(env_surv, env_growth, env_reproduction, 
                     clim_sd, clim_auto, sig.strength) {
   
-  n_it = length(env_surv[,1])
+  n_it = length(env_surv)
   
-  env <- list(survival = lapply(as.list(1:n_it), function(x) env_surv[x[1],]),
-              growth = lapply(as.list(1:n_it), function(x) env_growth[x[1],]),
-              reproduction = lapply(as.list(1:n_it), function(x) env_reproduction[x[1],]),
+  env <- list(survival = env_surv,
+              growth = env_growth,
+              reproduction = env_reproduction,
               clim_sd = clim_sd,
               sig.strength = sig.strength)
   
   ### Get all mpm's
-  mats <- pmap(env, mpm) %>% Filter(Negate(anyNA), .)
-  
+  mats <- purrr::pmap(env, mpm) %>% Filter(Negate(anyNA), .)
+  mats <- mats %>% purrr::discard(function(x) all(x == 0))
   
   df <- data.frame(lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
                    clim_sd = clim_sd,
                    clim_auto = clim_auto)
   
   return(list(df = df,
-              mats = sapply(mats, as.vector) %>% t %>% 
-                `colnames<-`(c("1,1", "2,1", "1,2", "2,2"))))
+              mats = NA)) #sapply(mats, as.vector) %>% t %>% 
+                #`colnames<-`(c("1,1", "2,1", "1,2", "2,2"))))
 }
 
 #---------------------------------------------------------------------------------------------------------
@@ -159,8 +155,8 @@ clim_sd <- rep(seq(from = 0.01, to = 2, length.out = 10), 90)
 clim_auto <- rep(rep(c(-0.9,0,0.9), each = 10), 30)
 
 # Set up parallel runs
-cl <- makeForkCluster(outfile = "")
-suppressMessages(clusterEvalQ(cl, c(library(popbio), library(dplyr), library(purrr))))
+cl <- makeForkCluster()
+suppressForeignCheck(clusterEvalQ(cl, c(library(popbio), library(dplyr), library(purrr))))
 
 # export objects to workers
 suppressMessages(clusterExport(cl, c("i", "create_seq", "inv.logit", "mpm", "st.lamb", "clim_auto", "clim_sd", "n_it")))
@@ -174,33 +170,33 @@ suppressMessages(clusterExport(cl, c("lag_clim")))
 #### Lagged effect between U & F matrices
 lag_p <- parLapplyLB(cl = cl,
                    lag_clim,
-                   function(x) tryCatch(st.lamb(env_surv = x[["lagged"]],
-                                                env_growth = x[["lagged"]],
-                                                env_reproduction = x[["recent"]],
-                                                clim_sd = sd(x[["recent"]]$clim, na.rm = T),
-                                                clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
+                   function(x) tryCatch(st.lamb(env_surv = x$lagged,
+                                                env_growth = x$lagged,
+                                                env_reproduction = x$recent,
+                                                clim_sd = sd(x$recent, na.rm = T),
+                                                clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                                 sig.strength = i),
                                         error=function(err) NA)
 )
 
 lag_f <- parLapplyLB(cl = cl,
                    lag_clim,
-                   function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
-                                                env_growth = x[["recent"]],
-                                                env_reproduction = x[["lagged"]],
-                                                clim_sd = sd(x[["recent"]]$clim, na.rm = T),
-                                                clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
+                   function(x) tryCatch(st.lamb(env_surv = x$recent,
+                                                env_growth = x$recent,
+                                                env_reproduction = x$lagged,
+                                                clim_sd = sd(x$recent, na.rm = T),
+                                                clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                                 sig.strength = i),
                                         error=function(err) NA)
 )
 
 lag_n2 <- parLapplyLB(cl = cl,
                     lag_clim,
-                    function(x) tryCatch(st.lamb(env_surv = x[["recent"]],
-                                                 env_growth = x[["recent"]],
-                                                 env_reproduction = x[["recent"]],
-                                                 clim_sd = sd(x[["recent"]]$clim, na.rm = T),
-                                                 clim_auto = acf(x[["recent"]]$clim, plot = F, na.action = na.pass)$acf[2],
+                    function(x) tryCatch(st.lamb(env_surv = x$recent,
+                                                 env_growth = x$recent,
+                                                 env_reproduction = x$recent,
+                                                 clim_sd = sd(x$recent, na.rm = T),
+                                                 clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                                  sig.strength = i),
                                          error=function(err) NA)
 )
