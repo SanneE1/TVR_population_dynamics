@@ -25,6 +25,7 @@ args = commandArgs(trailingOnly = T)
 output_dir <- args[1]
 
 n_it=50000
+print(paste("n_it =", n_it))
 
 #-----------------------------------------------------------
 # Create functions
@@ -84,7 +85,7 @@ st.lamb <- function(env_U, env_F,
   
   
   return(list(df = df,
-              mats = sapply(mats, as.vector) %>% t))
+              mats = NA)) #sapply(mats, as.vector) %>% t))
 }
 
 
@@ -150,7 +151,7 @@ df$cov_gf <- NA
 # Load compadre data file
 load("/gpfs1/data/lagged/data/COMPADRE_v.6.21.1.0.RData")
 
-for(sp in c(1:nrow(df))) {
+for(sp in c(14:nrow(df))) {
   
   print(sp)
   if(is.na(df$prec_auto[sp])) next   ## if prec_auto is na, prec_sd, tmean_auto & tmean_sd are also na
@@ -173,10 +174,10 @@ for(sp in c(1:nrow(df))) {
   #-----------------------------------------------------------
 
   # Retrieve all full matrices
-  Amats <- lapply(as.list(id), function(x) as.vector(compadre$mat[x][[1]]$matA)) %>% bind_cols
+  suppressMessages(Amats <- lapply(as.list(id), function(x) as.vector(compadre$mat[x][[1]]$matA)) %>% bind_cols)
   ## matrix cell position in vector -> c([1,1], [2,1], etc., [1,2], [2,2], etc.)
-  Umats <- lapply(as.list(id), function(x) as.vector(compadre$mat[x][[1]]$matU)) %>% bind_cols
-  Fmats <- lapply(as.list(id), function(x) as.vector(compadre$mat[x][[1]]$matF)) %>% bind_cols
+  suppressMessages(Umats <- lapply(as.list(id), function(x) as.vector(compadre$mat[x][[1]]$matU)) %>% bind_cols)
+  suppressMessages(Fmats <- lapply(as.list(id), function(x) as.vector(compadre$mat[x][[1]]$matF)) %>% bind_cols)
 
   # get dimension of the current current study/species_author. All matrices should be of the same size!!
   dim <- unique(compadre$metadata$MatrixDimension[id])
@@ -234,10 +235,11 @@ for(sp in c(1:nrow(df))) {
 
   # Set up parallel runs
   cl <- makeForkCluster(outfile = "")
-  suppressMessages(clusterEvalQ(cl, c(library(popbio), library(tidyverse), library(purrr), library(boot))))
+  suppressForeignCheck(clusterEvalQ(cl, c(library(popbio), library(tidyverse), 
+                                      library(purrr), library(boot))))
   
   # export objects to workers
-  suppressMessages(clusterExport(cl, c("st.lamb", "mpm",  "dim",
+  suppressMessages(clusterExport(cl, c("st.lamb", "mpm",  "dim", "create_seq",
                                        "Ucell_values", "Fcell_values", "df", "sp", "n_it")))
   
   ## Create climate sequences with population's sd and autocorrelation
@@ -257,7 +259,7 @@ for(sp in c(1:nrow(df))) {
   #-----------------------------------------------------------
 
   ### Lagged effect in U or F matrix
-
+  print("run prcp")
   plag_u <- parLapplyLB(cl = cl,
                         lag_prcp,
                         function(x) st.lamb(env_U = x[["lagged"]],
@@ -280,7 +282,7 @@ for(sp in c(1:nrow(df))) {
   # Run simulations for Temperature
   #-----------------------------------------------------------
   ### Lagged effect in U or F matrix
-
+  print("run temp")
 
   tlag_u <- parLapplyLB(cl = cl,
                         lag_temp,
@@ -299,13 +301,15 @@ for(sp in c(1:nrow(df))) {
                                             clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
                                             sig.strength = unique(x$sig.strength))
   )
+  
+print("save rds")
   save(plag_u, plag_n, tlag_u, tlag_n, file = file.path(output_dir, "rds", paste0("simulations_", i,"_", j, ".RData")))
   rm( list = Filter( exists, c("df1", "test1", "test1b", "df2", "test2", "test2b") ) )
 
   # Load rds files in case simulation has already been run to save time
   # load(file.path(output_dir, "rds", paste0("simulations_", i,"_", j, ".RData")))
 
-
+print("start tests")
   # Get differences in lambda between Ulagged and none for precipitation
   df1 <- rbind(
     lapply(plag_u, function(x) x$df) %>% bind_rows() %>% mutate(type = "Umatrix"),
@@ -352,6 +356,7 @@ for(sp in c(1:nrow(df))) {
 
   
   # Set up dataframe for lambda plots --------------------------------------------------------------------------------------------------------
+  print("start plotting")
   plot_df <- rbind(
     lapply(plag_u, function(x) x$df) %>% bind_rows %>% select(lambda, sig.strength) %>% mutate(type = "Umatrix"),
     lapply(plag_n, function(x) x$df) %>% bind_rows %>% select(lambda, sig.strength) %>% mutate(type = "None")
@@ -393,6 +398,7 @@ for(sp in c(1:nrow(df))) {
 
   ## Run mpm sequences again to get & plot mpm cell values --------------------------------------------------------------------------------------------------------
   # Randomly select climate sequences to check the cell values with sig.strength=1
+  print("start cell value plotting")
   n1 = sample(seq(1,length(lag_prcp), by = 4),1)
   n0.5 = sample(seq(2,length(lag_prcp), by = 4),1)
 
