@@ -79,8 +79,8 @@ st.lamb <- function(env_U, env_F,
                    sig.strength = sig.strength)
   
   
-  return(df = df,
-              mats = NA) #sapply(mats, as.vector) %>% t))
+  return(list(df = df,
+              mats = NA)) #sapply(mats, as.vector) %>% t))
 }
 
 
@@ -146,7 +146,7 @@ df$cov_gf <- NA
 # Load compadre data file
 load("/gpfs1/data/lagged/data/COMPADRE_v.6.21.1.0.RData")
 
-for(sp in c(14:nrow(df))) {
+for(sp in c(1:nrow(df))) {
   
   print(sp)
   if(is.na(df$prec_auto[sp])) next   ## if prec_auto is na, prec_sd, tmean_auto & tmean_sd are also na
@@ -534,6 +534,8 @@ print("start tests")
 
   rm(lag_prcp, lag_temp, valuesUobs, valuesFobs, sds, valuesFsig, valuesUobs, U1, U0.5, F1, F0.5,
      Uobs, Fobs, plag_u, plag_n, tlag_u, tlag_n)
+  stopCluster(cl)
+  
 }
 
 
