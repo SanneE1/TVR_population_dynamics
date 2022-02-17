@@ -400,7 +400,7 @@ print("start tests")
   ## Get all Umat and Fmat values
   matsU <- function(U_clim, clim_sd = 1, sig.strength) {
     devU <- U_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) +
-      U_clim$ran * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
+      rnorm(1,0,clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
     pU <- pnorm(devU, mean = 0, sd = clim_sd)
     Umat <- qbeta(pU,
                   (((Ucell_values$mean*(1-Ucell_values$mean))/(Ucell_values$sd * clim_sd)^2) - 1) * Ucell_values$mean,
@@ -412,7 +412,7 @@ print("start tests")
 
   matsF <- function(F_clim, clim_sd = 1, sig.strength) {
     devF <- F_clim * (sqrt(clim_sd^2 * sig.strength)/clim_sd) +
-      F_clim$ran * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
+      rnorm(1,0,clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd)
     pF <- pnorm(devF, mean = 0, sd = clim_sd)
     Fmat <- qgamma(pF,
                    (Fcell_values$mean^2)/(Fcell_values$sd * clim_sd)^2,
@@ -426,8 +426,8 @@ print("start tests")
   
   ## Set up dataframes to compare simulated cell values to observed
   U1 <- parLapplyLB(cl,
-                    split(lag_prcp[[n1]]$recent, seq(nrow(lag_prcp[[n1]]$recent))), function(x)
-    matsU(U_clim = x, sig.strength = lag_prcp[[n1]][["sig.strength"]])) %>%
+                    as.list(lag_prcp[[n1]]$recent), function(x)
+    matsU(U_clim = x, sig.strength = unique(lag_prcp[[n1]][["sig.strength"]]))) %>%
     bind_rows %>%
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
     mutate(cell = as.integer(gsub("X", "", cell)),
@@ -435,8 +435,8 @@ print("start tests")
            sig.strength = 1)
 
   U0.5 <- parLapplyLB(cl,
-                      split(lag_prcp[[n0.5]]$recent, seq(nrow(lag_prcp[[n0.5]]$recent))), function(x)
-    matsU(U_clim = x, sig.strength = lag_prcp[[n1]][["sig.strength"]])) %>%
+                      as.list(lag_prcp[[n0.5]]$recent), function(x)
+    matsU(U_clim = x, sig.strength = unique(lag_prcp[[n1]][["sig.strength"]]))) %>%
     bind_rows %>%
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
     mutate(cell = as.integer(gsub("X", "", cell)),
@@ -444,8 +444,8 @@ print("start tests")
            sig.strength = 0.5)
 
   F1 <- parLapplyLB(cl,
-                    split(lag_prcp[[n1]]$recent, seq(nrow(lag_prcp[[n1]]$recent))), function(x)
-    matsF(F_clim = x, sig.strength = lag_prcp[[n1]][["sig.strength"]]))%>%
+                    as.list(lag_prcp[[n1]]$recent), function(x)
+    matsF(F_clim = x, sig.strength = unique(lag_prcp[[n1]][["sig.strength"]]))) %>%
     bind_rows %>%
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
     mutate(cell = as.integer(gsub("X", "", cell)),
@@ -453,8 +453,9 @@ print("start tests")
            sig.strength = 1)
 
   F0.5 <- parLapplyLB(cl,
-                      split(lag_prcp[[n0.5]]$recent, seq(nrow(lag_prcp[[n0.5]]$recent))), function(x)
-    matsF(F_clim = x, sig.strength = lag_prcp[[n1]][["sig.strength"]])) %>% bind_rows %>%
+                      as.list(lag_prcp[[n0.5]]$recent), function(x)
+    matsF(F_clim = x, sig.strength = unique(lag_prcp[[n1]][["sig.strength"]]))) %>% 
+    bind_rows %>%
     pivot_longer(cols = everything(), names_to = "cell", values_to = "value") %>%
     mutate(cell = as.integer(gsub("X", "", cell)),
            matrix = "F",
