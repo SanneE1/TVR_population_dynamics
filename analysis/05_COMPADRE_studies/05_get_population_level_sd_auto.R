@@ -107,36 +107,36 @@ species <- read.csv("/gpfs1/data/lagged/data/species_authors.csv") %>% filter(!i
 # Create species summary file with empty columns to be filled in for loop
 df <- left_join(species, climate)
 
-df$Pmean_c_0.05 <- NA
-df$Pmean_U_0.05 <- NA
+df$Pmean_control_0.05 <- NA
+df$Pmean_Umatrix_0.05 <- NA
 df$Sig_p_0.05 <- NA
 
-df$Pmean_c_0.25 <- NA
-df$Pmean_U_0.25 <- NA
+df$Pmean_control_0.25 <- NA
+df$Pmean_Umatrix_0.25 <- NA
 df$Sig_p_0.25 <- NA
 
-df$Pmean_c_0.50 <- NA
-df$Pmean_U_0.50 <- NA
+df$Pmean_control_0.5 <- NA
+df$Pmean_Umatrix_0.5 <- NA
 df$Sig_p_0.50 <- NA
 
-df$Pmean_c_1 <- NA
-df$Pmean_U_1 <- NA
+df$Pmean_control_1 <- NA
+df$Pmean_Umatrix_1 <- NA
 df$Sig_p_1 <- NA
 
-df$Tmean_c_0.05 <- NA
-df$Tmean_U_0.05 <- NA
+df$Tmean_control_0.05 <- NA
+df$Tmean_Umatrix_0.05 <- NA
 df$Sig_t_0.05 <- NA
 
-df$Tmean_c_0.25 <- NA
-df$Tmean_U_0.25 <- NA
+df$Tmean_control_0.25 <- NA
+df$Tmean_Umatrix_0.25 <- NA
 df$Sig_t_0.25 <- NA
 
-df$Tmean_c_0.50 <- NA
-df$Tmean_U_0.50 <- NA
+df$Tmean_control_0.50 <- NA
+df$Tmean_Umatrix_0.50 <- NA
 df$Sig_t_0.50 <- NA
 
-df$Tmean_c_1 <- NA
-df$Tmean_U_1 <- NA
+df$Tmean_control_1 <- NA
+df$Tmean_Umatrix_1 <- NA
 df$Sig_t_1 <- NA
 
 df$cov_sg <- NA
@@ -305,19 +305,31 @@ print("save rds")
   # load(file.path(output_dir, "rds", paste0("simulations_", i,"_", j, ".RData")))
 
 print("start tests")
+
   # Get differences in lambda between Ulagged and none for precipitation
-  df1 <- rbind(
+
+  # Create dataframe for testing difference between the two different simulations types and signal strength
+df1 <- rbind(
     lapply(plag_u, function(x) x$df) %>% bind_rows() %>% mutate(type = "Umatrix"),
     lapply(plag_n, function(x) x$df) %>% bind_rows() %>% mutate(type = "control")) %>%
     filter(is.finite(lambda))
 
   # Calculate average lambda's for each climate signal strength (p in manuscript) and
   # use wolcox to test for significant difference between control and MCD stoch. lambda's
-  test1 <- df1 %>% group_by(sig.strength) %>% wilcox_test(lambda ~ type) %>% add_significance()
-  test1b <- df1 %>% group_by(sig.strength, type) %>% get_summary_stats(lambda)
-  df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j), c("Sig_p_0.05", "Sig_p_0.25", "Sig_p_0.50", "Sig_p_1")] <- round(test1$p, digits = 3)
+  test1 <- df1 %>% group_by(sig.strength) %>% wilcox_test(lambda ~ type) %>% add_significance() %>% as.data.frame()
+  test1b <- df1 %>% group_by(sig.strength, type) %>% get_summary_stats(lambda) %>% 
+    mutate(mean_type = paste("Pmean", type, sig.strength, sep = "_")) %>% 
+    tibble::column_to_rownames(var = "mean_type")
+
+  # set up string vector to make sure rows in test dataframe and columns in species summary file (df) will match up
+  p_string <- c("Pmean_control_0.05", "Pmean_Umatrix_0.05", "Pmean_control_0.25", "Pmean_Umatrix_0.25", 
+                "Pmean_control_0.5", "Pmean_Umatrix_0.5", "Pmean_control_1", "Pmean_Umatrix_1")
+  
+  # Save results to the summary data.frame
+  df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j), 
+     c("Sig_p_0.05", "Sig_p_0.25", "Sig_p_0.50", "Sig_p_1")] <- round(test1[c("Sig_p_0.05", "Sig_p_0.25", "Sig_p_0.50", "Sig_p_1"),"p"], digits = 3)
   df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j),
-     c("Pmean_c_0.05", "Pmean_U_0.05", "Pmean_c_0.25", "Pmean_U_0.25", "Pmean_c_0.50", "Pmean_U_0.50", "Pmean_c_1", "Pmean_U_1")] <- round(test1b$mean, digits = 3)
+     p_string] <- round(test1b[p_string, "mean"], digits = 3)
 
 
   ## Get differences in lambda between Ulagged and none for temperature
@@ -328,11 +340,20 @@ print("start tests")
 
   # Calculate average lambda's for each climate signal strength (p in manuscript) and
   # use wolcox to test for significant difference between control and MCD stoch. lambda's
-  test2 <- df2 %>% group_by(sig.strength) %>% wilcox_test(lambda ~ type) %>% add_significance()
-  test2b <- df2 %>% group_by(sig.strength, type) %>% get_summary_stats(lambda)
+  test2 <- df2 %>% group_by(sig.strength) %>% wilcox_test(lambda ~ type) %>% add_significance() %>% as.data.frame()
+  test2b <- df2 %>% group_by(sig.strength, type) %>% get_summary_stats(lambda) %>% 
+    mutate(mean_type = paste("Pmean", type, sig.strength, sep = "_")) %>% 
+    tibble::column_to_rownames(var = "mean_type")
+  
+  # set up string vector to make sure rows in test dataframe and columns in species summary file (df) will match up
+  t_string <- c("Tmean_control_0.05", "Tmean_Umatrix_0.05", "Tmean_control_0.25", "Tmean_Umatrix_0.25", 
+                "Tmean_control_0.5", "Tmean_Umatrix_0.5", "Tmean_control_1", "Tmean_Umatrix_1")
+  
+  # Save results to the summary data.frame
+  
   df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j), c("Sig_t_0.05", "Sig_t_0.25", "Sig_t_0.50", "Sig_t_1")] <- round(test2$p, digits = 3)
   df[which(df$SpeciesAuthor == i & df$MatrixPopulation == j),
-     c("Tmean_c_0.05", "Tmean_U_0.05", "Tmean_c_0.25", "Tmean_U_0.25", "Tmean_c_0.50", "Tmean_U_0.50", "Tmean_c_1", "Tmean_U_1")] <- round(test2b$mean, digits = 3)
+     t_string] <- round(test2b[t_string, "mean"], digits = 3)
 
 
   ## Get survival, growth and fecundity to calculate covariance of the vital rates
