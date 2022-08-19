@@ -3,7 +3,9 @@
 # Script depends on three arguments from the command line: 
 # 1) location of the downloaded files - The files function is recursive, so you can name the first directory 
 #    where downstream there are only CHELSA files
-# 2) the file with lat-lon information - formatting of the coordinates df (#1) would need changing for other use
+# 2) the file with lat-lon information - Column names = "Lat" and "Lon". 
+#    If you want to have extra information from this file in the final file, you can select those columns in L36
+#    Change the selection currently in use in L36 for different projects
 # 3) output location for the climate csv
 
 # MAKE SURE TO CHECK THE LOG FILES AT THE END. SCRIPT WILL PRINT FILES WHERE IT IS UNABLE TO EXTRACT DATA 

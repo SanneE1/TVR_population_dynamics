@@ -75,15 +75,18 @@ get_all <- function(SpeciesAuthor, MatrixPopulation) {
     meanU <- matrix(Ucell_values$mean, nrow = dim, ncol = dim)
     meanF <- matrix(Fcell_values$mean, nrow = dim, ncol = dim)
     
-    R0 <- R0(meanU, meanF)                                               ## Net reproductive value
-    La <- lifeTimeRepEvents(meanU, meanF)$La                             ## mean age at maturity
-    Gen_time <- generation.time(meanA)                                   ## Generation time
+    R0 <- Rage::net_repro_rate(meanU, meanF)                          ## Net reproductive value
+    La <- Rage::mature_age(meanU, meanF)                              ## mean age at maturity
+    Gen_time <- Rage::gen_time(meanU, meanF)                          ## Generation time
+    S <- Rage::entropy_d(mpm_to_lx(meanU), mpm_to_mx(meanU, meanF))   ## Degree of iteroparity
+    
     
   }else{
     
     R0 <- NA                                              
     La <- NA
     Gen_time <- NA
+    S <- NA
     
     print(paste("Different sized matrices in same study. Species:", SpeciesAuthor, "population:", MatrixPopulation))
   
@@ -93,7 +96,8 @@ get_all <- function(SpeciesAuthor, MatrixPopulation) {
                       MatrixPopulation = MatrixPopulation,
                       R0 = R0,
                       La = La,
-                      Gen_time = Gen_time))
+                      Gen_time = Gen_time,
+                      S = S))
   
   
   
