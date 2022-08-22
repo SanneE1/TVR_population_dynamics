@@ -27,7 +27,7 @@ sigstrength=$1
 
 export MC_CORES=${SLURM_CPUS_PER_TASK:-1}
  
-Rscript "$HOME"/lagged_buffering/analysis/01_simulations_same_directional_responses.R \
+Rscript --vanilla "$HOME"/lagged_buffering/analysis/01_simulations_same_directional_responses.R \
 "$sigstrength" \
 "$OUTPUT_DIR" \
 "$lifehist"
