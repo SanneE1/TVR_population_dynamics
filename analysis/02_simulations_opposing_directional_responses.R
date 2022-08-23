@@ -4,9 +4,9 @@
 #
 # This script includes arguments so it can be submitted on the UFZ HPC "EVE"
 # Also see "submit_simulation.sh" in the same folder for the job submission script
-#
-
 rm(list=ls())
+
+start <- Sys.time()
 
 set.seed(2)
 
@@ -20,9 +20,12 @@ library(boot)
 # Get required arguments supplied during job submission
 args = commandArgs(trailingOnly = T)
 
-if(length(args)!=2) {  
+if(length(args)!=3) {  
 stop("Provide (only) signal strength for the analysis", call.=F)
 }
+
+# Get task ID from array job -> determines for which lifehistory the script will run
+taskID <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID"))
 
 # Set the proportion of variance (p) explained by the climate driver in the temporal sequence.
 # Here set to 1, 0.5, 0.25 or 0.05. See manuscript for more info
@@ -31,68 +34,78 @@ i = as.numeric(args[1])
 # File location of the simulation script with SAME DIRECTIONAL responses to climate
 output_dir <- args[2]
 
-source_file <- "/gpfs1/data/lagged/analysis/01_simulations_same_directional_responses.R"
+# location of lifehistories file
+lh_location <- args[3]
 
-print(paste("signal strength =", i))
+# Number of iterations to run the simulations
+n_it = 10000
+
+# Print information for the log file
+print(paste("sig.strength =", i))
 print(paste("output dir =", output_dir))
-print(paste("source file =", source_file))
+print(paste("location of lifehistories file = ", lh_location))
+print(paste("#iterations =", n_it))
+
+# Load and prep lifehistories table  ------------------------------------------------------------------------------------
+
+lh_df <- read.csv(lh_location)
+lh_df <- lh_df[taskID,]
+
+print("life history currently being used")
+print(lh_df)
+
+# Source script with R functions required
+
+source("/gpfs0/home/evers/lagged_buffering/R/lambda_functions.R")
+
+#---------------------------------------------------------------------------------------------------------
+# Start of analyses
+#---------------------------------------------------------------------------------------------------------
+
+## set up sequences of climate standard deviation and autocorrelation values so that there are 30 duplicates 
+## for each combination of sd & autocorrelation value
+
+df_clim <- expand.grid(clim_sd = seq(from = 0.01, to = 2, length.out = 5),
+                       clim_auto =  c(-0.9,0,0.9),
+                       rep = c(1:30))
+
+#### Create main temporal sequences
+lag_clim <- lapply(as.list(c(1:nrow(df_clim))), 
+                   function(x) create_seq(n_it, 
+                                          clim_sd = df_clim$clim_sd[x], 
+                                          clim_auto = df_clim$clim_auto[x], 
+                                          lag = 1))
+
+#### Lagged effect between U & F matrices
+lag_p <- lapply(lag_clim,
+                function(x) st.lamb_o(mpm_df = lh_df,
+                                    env_surv = x$lagged,
+                                    env_growth = x$lagged,
+                                    env_reproduction = x$recent,
+                                    clim_sd = sd(x$recent, na.rm = T),
+                                    clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
+                                    sig.strength = i)
+) %>% bind_rows() %>%
+  tibble::add_column(lag_type = "Umatrix")
+
+print("done w/ P sim")
 
 
-### Create line sourcing to
-source_lines <- function(file, lines){
-  source(textConnection(readLines(file)[lines]))
-}
+lag_n2 <- lapply(lag_clim,
+                 function(x) st.lamb_o(mpm_df = lh_df,
+                                     env_surv = x$recent,
+                                     env_growth = x$recent,
+                                     env_reproduction = x$recent,
+                                     clim_sd = sd(x$recent, na.rm = T),
+                                     clim_auto = acf(x$recent, plot = F, na.action = na.pass)$acf[2],
+                                     sig.strength = i)
+) %>% bind_rows() %>%
+  tibble::add_column(lag_type = "none")
 
-### Create mpm function with +P (s&g) and - F
-mpm <- function(survival, growth, reproduction,
-                clim_sd, sig.strength) {
-  ## Basic mpm
-  mpm <- matrix(0, nrow = 2, ncol = 2)
+print("done w/ none sim")
 
-  # growth
-  g_mean = 0.325
-  g_sd = 0.118
+lag_df <- rbind(lag_p, lag_n2)
 
-  if(is.na(growth)) {
-    mpm[2,1] <- g_mean
-  } else {
-    ## total deviation from mean = climate signal * signal strength & correction factor (partitioning at variance scale) + random noise * signal strength
-    dev <- growth * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
-      rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
-    ## Because of partitioning and correction factor above, the resulting distribution has a sd of clim_sd
-    p <- pnorm(dev, mean = 0, sd = clim_sd)
-    mpm[2,1] <- qbeta(p, (((g_mean*(1-g_mean))/(g_sd * clim_sd)^2) - 1) * g_mean,
-                      (((g_mean*(1-g_mean))/(g_sd * clim_sd)^2) - 1) * (1 - g_mean))
-  }
+write.csv(lag_df, file.path(output_dir, paste("mpm", i, taskID, "lagf_oposing.csv", sep = "_")))
 
-  # survival
-  s_mean = 0.541
-  s_sd = 0.135
-  if(is.na(survival)) {
-    mpm[2,2] <- s_mean
-  } else {
-    dev <- survival * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
-    p <- pnorm(dev, mean = 0, sd = clim_sd)
-    mpm[2,2] <- qbeta(p, (((s_mean*(1-s_mean))/(s_sd * clim_sd)^2) - 1) * s_mean,
-                      (((s_mean*(1-s_mean))/(s_sd * clim_sd)^2) - 1) * (1 - s_mean))
-  }
-
-  # reproduction
-  f_mean = 0.788
-  f_sd = 0.862
-  if(is.na(reproduction)) {
-    mpm[1,2] <- f_mean
-  } else {
-    dev <- (-reproduction) * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
-    p <- pnorm(dev, mean = 0, sd = clim_sd)
-    mpm[1,2] <- qgamma(p, (f_mean^2)/(f_sd * clim_sd)^2, (f_mean)/(f_sd * clim_sd)^2)
-  }
-
-  return(mpm)
-}
-
-## Run simulations ----------------------------------------
-
-# Get create_seq(), st.lamb(), n_it and set up parallel. Source lines from 01 script
-print("retrieving functions and running simulations")
-source_lines(source_file, c(39:68, 121:212))
+Sys.time() - start

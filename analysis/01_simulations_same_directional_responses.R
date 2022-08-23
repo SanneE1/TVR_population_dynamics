@@ -58,7 +58,7 @@ print(lh_df)
 
 # Source script with R functions required
 
-source("/gpfs0/home/evers/lagged_buffering/R/lambda_same_dir_functions.R")
+source("/gpfs0/home/evers/lagged_buffering/R/lambda_functions.R")
 
 #---------------------------------------------------------------------------------------------------------
 # Start of analyses
