@@ -108,6 +108,6 @@ print("done w/ none sim")
 
 lag_df <- rbind(lag_p, lag_n2)
 
-write.csv(lag_df, file.path(output_dir, paste("mpm", i, taskID, "lagfp.csv", sep = "_")))
+write.csv(lag_df, file.path(output_dir, paste("mpm", i, taskID, "lagfp.csv", sep = "_")), row.names = F)
 
 Sys.time() - start
