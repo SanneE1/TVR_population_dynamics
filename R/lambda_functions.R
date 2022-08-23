@@ -188,7 +188,7 @@ st.lamb <- function(mpm_df, env_surv, env_growth, env_reproduction,
   mats <- purrr::pmap(env, mpm) %>% Filter(Negate(anyNA), .)
   mats <- mats %>% purrr::discard(function(x) all(x == 0))
   
-  df <- mpm_df %>% tibble::add_column(lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
+  df <- mpm_df %>% tibble::add_column(lambda = popbio::stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
                                       clim_sd = clim_sd,
                                       clim_auto = clim_auto)
   
@@ -217,7 +217,7 @@ st.lamb_o <- function(mpm_df, env_surv, env_growth, env_reproduction,
   mats <- purrr::pmap(env, mpm_o) %>% Filter(Negate(anyNA), .)
   mats <- mats %>% purrr::discard(function(x) all(x == 0))
   
-  df <- mpm_df %>% tibble::add_column(lambda = stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
+  df <- mpm_df %>% tibble::add_column(lambda = popbio::stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
                                       clim_sd = clim_sd,
                                       clim_auto = clim_auto)
   

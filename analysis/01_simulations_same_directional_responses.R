@@ -11,13 +11,6 @@ start <- Sys.time()
 set.seed(2)
 
 library(dplyr)
-library(tidyr)
-library(popbio)
-library(parallel)
-library(ggplot2)
-library(faux)
-library(boot)
-library(purrr)
 
 # Get required arguments supplied during job submission
 args = commandArgs(trailingOnly = T)
