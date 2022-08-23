@@ -15,7 +15,7 @@
 #SBATCH --mem-per-cpu=4G
 
 # create output direcotry per job
-OUTPUT_DIR="/work/$USER/$SLURM_JOB_NAME-$SLURM_JOB_ID"
+OUTPUT_DIR="/work/$USER/$SLURM_JOB_NAME-$SLURM_ARRAY_JOB_ID"
 mkdir -p $OUTPUT_DIR
 
 # location lifehistories datafile 
