@@ -34,6 +34,10 @@ create_seq <- function(n_it, clim_sd, clim_auto, lag) {
 mpm <- function(mpm_df, survival, growth, reproduction, 
                 clim_sd, sig.strength) {
   
+  #correction factor (partitioning at variance scale) for climate (thetaP) and random noise (thetaP1 (theta[p-1]))
+  thetaP <- sqrt(clim_sd^2 * sig.strength)/clim_sd
+  thetaP1 <- sqrt(clim_sd^2 * (1-sig.strength))/clim_sd
+  
   # growth 
   g_mean = mpm_df$gamma
   g_sd = sqrt(mpm_df$gamma_var)
@@ -42,8 +46,8 @@ mpm <- function(mpm_df, survival, growth, reproduction,
     gamma <- g_mean  
   } else {
     ## total deviation from mean = climate signal * signal strength & correction factor (partitioning at variance scale) + random noise * signal strength
-    dev <- growth * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
-      rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- growth * thetaP + 
+      rnorm(1,0, clim_sd) * thetaP1 
     ## Because of partitioning and correction factor above, the resulting distribution has a sd of clim_sd
     p <- pnorm(dev, mean = 0, sd = clim_sd) 
     gamma <- qbeta(p, (((g_mean*(1-g_mean))/(g_sd * clim_sd)^2) - 1) * g_mean,
@@ -53,11 +57,11 @@ mpm <- function(mpm_df, survival, growth, reproduction,
   # survival juveniles
   sj_mean = mpm_df$Sj
   sj_sd = sqrt(mpm_df$Sj_var)
-  
+
   if(is.na(survival)) {
     Sj <- sj_mean
   } else {
-    dev <- survival * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- survival * thetaP + rnorm(1,0, clim_sd) * thetaP1 
     p <- pnorm(dev, mean = 0, sd = clim_sd) 
     Sj <- qbeta(p, (((sj_mean*(1-sj_mean))/(sj_sd * clim_sd)^2) - 1) * sj_mean,
                 (((sj_mean*(1-sj_mean))/(sj_sd * clim_sd)^2) - 1) * (1 - sj_mean))
@@ -70,29 +74,29 @@ mpm <- function(mpm_df, survival, growth, reproduction,
   if(is.na(survival)) {
     Sa <- sa_mean
   } else {
-    dev <- survival * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- survival * thetaP + rnorm(1,0, clim_sd) * thetaP1 
     p <- pnorm(dev, mean = 0, sd = clim_sd) 
     Sa <- qbeta(p, (((sa_mean*(1-sa_mean))/(sa_sd * clim_sd)^2) - 1) * sa_mean,
                 (((sa_mean*(1-sa_mean))/(sa_sd * clim_sd)^2) - 1) * (1 - sa_mean))
   }
   
   # reproduction 
-  phi_mean = mpm_df$phi
-  phi_sd = sqrt(mpm_df$phi_var)
+  rho_mean = mpm_df$rho
+  rho_sd = sqrt(mpm_df$rho_var)
   
   if(is.na(reproduction)) {
-    phi <- phi_mean
+    rho <- rho_mean
   } else {
-    dev <- reproduction * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- reproduction * thetaP + rnorm(1,0, clim_sd) * thetaP1 
     p <- pnorm(dev, mean = 0, sd = clim_sd) 
-    phi <- qgamma(p, (phi_mean^2)/(phi_sd * clim_sd)^2, (phi_mean)/(phi_sd * clim_sd)^2)
+    rho <- qgamma(p, (rho_mean^2)/(rho_sd * clim_sd)^2, (rho_mean)/(rho_sd * clim_sd)^2)
   }
   
   # creat matrix from vr
   mat <- matrix(0,2,2)
   mat[1,1] <- Sj*(1-gamma)
   mat[2,1] <- Sj*gamma
-  mat[1,2] <- phi
+  mat[1,2] <- rho
   mat[2,2] <- Sa
   
   
@@ -103,6 +107,9 @@ mpm <- function(mpm_df, survival, growth, reproduction,
 mpm_o <- function(mpm_df, survival, growth, reproduction, 
                 clim_sd, sig.strength) {
   
+  thetaP <- sqrt(clim_sd^2 * sig.strength)/clim_sd
+  thetaP1 <- sqrt(clim_sd^2 * (1-sig.strength))/clim_sd
+  
   # growth 
   g_mean = mpm_df$gamma
   g_sd = sqrt(mpm_df$gamma_var)
@@ -111,8 +118,8 @@ mpm_o <- function(mpm_df, survival, growth, reproduction,
     gamma <- g_mean  
   } else {
     ## total deviation from mean = climate signal * signal strength & correction factor (partitioning at variance scale) + random noise * signal strength
-    dev <- growth * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + 
-      rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- growth * thetaP + 
+      rnorm(1,0, clim_sd) * thetaP1 
     ## Because of partitioning and correction factor above, the resulting distribution has a sd of clim_sd
     p <- pnorm(dev, mean = 0, sd = clim_sd) 
     gamma <- qbeta(p, (((g_mean*(1-g_mean))/(g_sd * clim_sd)^2) - 1) * g_mean,
@@ -126,7 +133,7 @@ mpm_o <- function(mpm_df, survival, growth, reproduction,
   if(is.na(survival)) {
     Sj <- sj_mean
   } else {
-    dev <- survival * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- survival * thetaP + rnorm(1,0, clim_sd) * thetaP1 
     p <- pnorm(dev, mean = 0, sd = clim_sd) 
     Sj <- qbeta(p, (((sj_mean*(1-sj_mean))/(sj_sd * clim_sd)^2) - 1) * sj_mean,
                 (((sj_mean*(1-sj_mean))/(sj_sd * clim_sd)^2) - 1) * (1 - sj_mean))
@@ -139,29 +146,29 @@ mpm_o <- function(mpm_df, survival, growth, reproduction,
   if(is.na(survival)) {
     Sa <- sa_mean
   } else {
-    dev <- survival * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- survival * thetaP + rnorm(1,0, clim_sd) * thetaP1 
     p <- pnorm(dev, mean = 0, sd = clim_sd) 
     Sa <- qbeta(p, (((sa_mean*(1-sa_mean))/(sa_sd * clim_sd)^2) - 1) * sa_mean,
                 (((sa_mean*(1-sa_mean))/(sa_sd * clim_sd)^2) - 1) * (1 - sa_mean))
   }
   
   # reproduction 
-  phi_mean = mpm_df$phi
-  phi_sd = sqrt(mpm_df$phi_var)
+  rho_mean = mpm_df$rho
+  rho_sd = sqrt(mpm_df$rho_var)
   
   if(is.na(reproduction)) {
-    phi <- phi_mean
+    rho <- rho_mean
   } else {
-    dev <- (-reproduction) * (sqrt(clim_sd^2 * sig.strength)/clim_sd) + rnorm(1,0, clim_sd) * (sqrt(clim_sd^2 * (1-sig.strength))/clim_sd) 
+    dev <- (-reproduction) * thetaP + rnorm(1,0, clim_sd) * thetaP1 
     p <- pnorm(dev, mean = 0, sd = clim_sd) 
-    phi <- qgamma(p, (phi_mean^2)/(phi_sd * clim_sd)^2, (phi_mean)/(phi_sd * clim_sd)^2)
+    rho <- qgamma(p, (rho_mean^2)/(rho_sd * clim_sd)^2, (rho_mean)/(rho_sd * clim_sd)^2)
   }
   
   # creat matrix from vr
   mat <- matrix(0,2,2)
   mat[1,1] <- Sj*(1-gamma)
   mat[2,1] <- Sj*gamma
-  mat[1,2] <- phi
+  mat[1,2] <- rho
   mat[2,2] <- Sa
   
   
