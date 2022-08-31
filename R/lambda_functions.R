@@ -38,25 +38,9 @@ mpm <- function(mpm_df, survival, growth, reproduction,
   thetaP <- sqrt(clim_sd^2 * sig.strength)/clim_sd
   thetaP1 <- sqrt(clim_sd^2 * (1-sig.strength))/clim_sd
   
-  # growth 
-  g_mean = mpm_df$gamma
-  g_sd = sqrt(mpm_df$gamma_var)
-  
-  if(is.na(growth)) {
-    gamma <- g_mean  
-  } else {
-    ## total deviation from mean = climate signal * signal strength & correction factor (partitioning at variance scale) + random noise * signal strength
-    dev <- growth * thetaP + 
-      rnorm(1,0, clim_sd) * thetaP1 
-    ## Because of partitioning and correction factor above, the resulting distribution has a sd of clim_sd
-    p <- pnorm(dev, mean = 0, sd = clim_sd) 
-    gamma <- qbeta(p, (((g_mean*(1-g_mean))/(g_sd * clim_sd)^2) - 1) * g_mean,
-                   (((g_mean*(1-g_mean))/(g_sd * clim_sd)^2) - 1) * (1 - g_mean))
-  }
-  
   # survival juveniles
   sj_mean = mpm_df$Sj
-  sj_sd = sqrt(mpm_df$Sj_var)
+  sj_sd = mpm_df$Sj_sd
 
   if(is.na(survival)) {
     Sj <- sj_mean
@@ -69,7 +53,7 @@ mpm <- function(mpm_df, survival, growth, reproduction,
   
   # survival adults
   sa_mean = mpm_df$Sa
-  sa_sd = sqrt(mpm_df$Sa_var)
+  sa_sd = mpm_df$Sa_sd
   
   if(is.na(survival)) {
     Sa <- sa_mean
@@ -82,7 +66,7 @@ mpm <- function(mpm_df, survival, growth, reproduction,
   
   # reproduction 
   rho_mean = mpm_df$rho
-  rho_sd = sqrt(mpm_df$rho_var)
+  rho_sd = mpm_df$rho_sd
   
   if(is.na(reproduction)) {
     rho <- rho_mean
@@ -94,8 +78,8 @@ mpm <- function(mpm_df, survival, growth, reproduction,
   
   # creat matrix from vr
   mat <- matrix(0,2,2)
-  mat[1,1] <- Sj*(1-gamma)
-  mat[2,1] <- Sj*gamma
+  mat[1,1] <- Sj*(1-mpm_df$gamma)
+  mat[2,1] <- Sj*mpm_df$gamma
   mat[1,2] <- rho
   mat[2,2] <- Sa
   
@@ -110,25 +94,9 @@ mpm_o <- function(mpm_df, survival, growth, reproduction,
   thetaP <- sqrt(clim_sd^2 * sig.strength)/clim_sd
   thetaP1 <- sqrt(clim_sd^2 * (1-sig.strength))/clim_sd
   
-  # growth 
-  g_mean = mpm_df$gamma
-  g_sd = sqrt(mpm_df$gamma_var)
-  
-  if(is.na(growth)) {
-    gamma <- g_mean  
-  } else {
-    ## total deviation from mean = climate signal * signal strength & correction factor (partitioning at variance scale) + random noise * signal strength
-    dev <- growth * thetaP + 
-      rnorm(1,0, clim_sd) * thetaP1 
-    ## Because of partitioning and correction factor above, the resulting distribution has a sd of clim_sd
-    p <- pnorm(dev, mean = 0, sd = clim_sd) 
-    gamma <- qbeta(p, (((g_mean*(1-g_mean))/(g_sd * clim_sd)^2) - 1) * g_mean,
-                   (((g_mean*(1-g_mean))/(g_sd * clim_sd)^2) - 1) * (1 - g_mean))
-  }
-  
   # survival juveniles
   sj_mean = mpm_df$Sj
-  sj_sd = sqrt(mpm_df$Sj_var)
+  sj_sd = mpm_df$Sj_sd
   
   if(is.na(survival)) {
     Sj <- sj_mean
@@ -141,7 +109,7 @@ mpm_o <- function(mpm_df, survival, growth, reproduction,
   
   # survival adults
   sa_mean = mpm_df$Sa
-  sa_sd = sqrt(mpm_df$Sa_var)
+  sa_sd = mpm_df$Sa_sd
   
   if(is.na(survival)) {
     Sa <- sa_mean
@@ -154,7 +122,7 @@ mpm_o <- function(mpm_df, survival, growth, reproduction,
   
   # reproduction 
   rho_mean = mpm_df$rho
-  rho_sd = sqrt(mpm_df$rho_var)
+  rho_sd = mpm_df$rho_sd
   
   if(is.na(reproduction)) {
     rho <- rho_mean
@@ -166,8 +134,8 @@ mpm_o <- function(mpm_df, survival, growth, reproduction,
   
   # creat matrix from vr
   mat <- matrix(0,2,2)
-  mat[1,1] <- Sj*(1-gamma)
-  mat[2,1] <- Sj*gamma
+  mat[1,1] <- Sj*(1-mpm_df$gamma)
+  mat[2,1] <- Sj*mpm_df$gamma
   mat[1,2] <- rho
   mat[2,2] <- Sa
   

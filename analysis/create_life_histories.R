@@ -20,35 +20,18 @@ mat_df <- expand.grid(
 df <- df_elas_per_vr(mat_df) %>% 
   rowwise() %>%
   mutate(
-    tau_Sj = (1-elas_Sj)/max(elas_Sj, elas_Sa, elas_gamma, elas_rho),
-    tau_Sa = (1-elas_Sa)/max(elas_Sj, elas_Sa, elas_gamma, elas_rho),
-    tau_gamma = (1-elas_gamma)/max(elas_Sj, elas_Sa, elas_gamma, elas_rho),
-    tau_rho = (1-elas_rho)/max(elas_Sj, elas_Sa, elas_gamma, elas_rho)
+    tau_Sj = (1-elas_Sj)/max(elas_Sj, elas_Sa, elas_rho),
+    tau_Sa = (1-elas_Sa)/max(elas_Sj, elas_Sa, elas_rho),
+    tau_gamma = (1-elas_gamma)/max(elas_Sj, elas_Sa, elas_rho),
+    tau_rho = (1-elas_rho)/max(elas_Sj, elas_Sa, elas_rho)
       ) %>%
-  # mutate(
-  #   tau_Sj = 1,
-  #   tau_Sa = 1,
-  #   tau_gamma = 1,
-  #   tau_rho = 1
-  # ) %>%
 # Calculate variance for each vital rate
   mutate(
-    Sj_var = tau_Sj * 0.5 * Vmax(Sj),
-    Sa_var = tau_Sa * 0.5 * Vmax(Sa),
-    gamma_var = tau_gamma * 0.5 * Vmax(gamma),
-    rho_var = tau_rho * 0.5 * 1
+    Sj_sd = tau_Sj * 0.75 * CVmax(Sj) * Sj,
+    Sa_sd = tau_Sa * 0.75 * CVmax(Sa) * Sa,
+    rho_sd = tau_rho * 0.75 * 1 * rho
   ) %>%
-  mutate(
-    sum_elas = sum(elas_Sj, elas_Sa, elas_gamma, elas_rho),
-    Sj_alpha = dampack::beta_params(Sj, sqrt(Sj_var))$alpha,
-    Sj_beta = dampack::beta_params(Sj, sqrt(Sj_var))$beta,
-    Sa_alpha = dampack::beta_params(Sa, sqrt(Sa_var))$alpha,
-    Sa_beta = dampack::beta_params(Sa, sqrt(Sa_var))$beta,
-    gamma_alpha = dampack::beta_params(gamma, sqrt(gamma_var))$alpha,
-    gamma_beta = dampack::beta_params(gamma, sqrt(gamma_var))$beta,
-    rho_alpa = dampack::gamma_params(rho, sqrt(rho_var))$shape
-    ) %>% 
-  # select(-c(contains("elas"), contains("tau"))) %>%
+  select(-c(contains("elas"), contains("tau"))) %>%
   rowid_to_column(var = "lh_id")
 
 ## save df
