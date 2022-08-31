@@ -8,7 +8,7 @@ rm(list=ls())
 
 start <- Sys.time()
 
-set.seed(2)
+# set.seed(2)
 
 library(dplyr)
 
@@ -60,7 +60,7 @@ source("/gpfs0/home/evers/lagged_buffering/R/lambda_functions.R")
 ## set up sequences of climate standard deviation and autocorrelation values so that there are 30 duplicates 
 ## for each combination of sd & autocorrelation value
 
-df_clim <- expand.grid(clim_sd = seq(from = 0.01, to = 2, length.out = 5),
+df_clim <- expand.grid(clim_sd = seq(from = 0.01, to = 1, length.out = 5),
                        clim_auto =  c(-0.9,0,0.9),
                        rep = c(1:30))
 
