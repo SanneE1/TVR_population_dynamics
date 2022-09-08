@@ -48,11 +48,39 @@ df_elas_per_vr <- function(vr_df) {
   
 }
 
+# calculate life history traits
+single_row_lh_traits <- function(ii, vr_df) {
+  
+  df <- vr_df[ii,] %>%
+    add_column()
+  
+  mat <- create_mpm_from_vr(df)
+
+  df <- df %>% add_column(
+    gen.time = generation.time(mat),
+    damp.ratio = damping.ratio(mat),
+    R0 = net.reproductive.rate(mat)
+  ) 
+  
+  df <- do.call(data.frame, lapply(df,
+                                   function(x) replace(x, is.infinite(x), NA)))
+  
+    return(df)
+  
+}
+
+
+df_lh_traits <- function(vr_df) {
+  
+  lapply(as.list(seq_len(nrow(vr_df))), function(x) single_row_lh_traits(x, vr_df = vr_df)) %>% bind_rows
+  
+}
+
+
+
+
 # Calculate the maximum possible coefficient of variation for a probability (Morris & Doak 2004)
 CVmax <- function(mean) {
   sqrt((1-mean)/mean)
 }
 
-Vmax <- function(mean) {
-  mean*(1-mean)
-}
