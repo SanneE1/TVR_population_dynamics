@@ -8,7 +8,7 @@ rm(list=ls())
 
 start <- Sys.time()
 
-# set.seed(2)
+set.seed(2)
 
 library(dplyr)
 
