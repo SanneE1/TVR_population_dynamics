@@ -41,7 +41,7 @@ mpm <- function(mpm_df, survival, growth, reproduction,
   # survival juveniles
   sj_mean = mpm_df$Sj
   sj_sd = mpm_df$Sj_sd
-
+  
   if(is.na(survival)) {
     Sj <- sj_mean
   } else {
@@ -89,7 +89,7 @@ mpm <- function(mpm_df, survival, growth, reproduction,
 
 ## does the same as the mpm function above, but simulates opposing responses to climate in surv/growth and fecundity
 mpm_o <- function(mpm_df, survival, growth, reproduction, 
-                clim_sd, sig.strength) {
+                  clim_sd, sig.strength) {
   
   thetaP <- sqrt(clim_sd^2 * sig.strength)/clim_sd
   thetaP1 <- sqrt(clim_sd^2 * (1-sig.strength))/clim_sd
@@ -147,7 +147,7 @@ mpm_o <- function(mpm_df, survival, growth, reproduction,
 
 ## This function will create a MPM for each iteration of the environmental sequence, and calculate the stochastic lambda of said MPM sequence 
 st.lamb <- function(mpm_df, env_surv, env_growth, env_reproduction, 
-                    clim_sd, clim_auto, sig.strength) {
+                    clim_sd, clim_auto, sig.strength, return.mpm = F) {
   
   n_it = length(env_surv)
   
@@ -167,16 +167,19 @@ st.lamb <- function(mpm_df, env_surv, env_growth, env_reproduction,
                                       clim_sd = clim_sd,
                                       clim_auto = clim_auto)
   
-  return(df = df) 
-  # if you want to also return the matrices:
-  # return(list(df = df,
-  #        mats = sapply(mats, as.vector) %>% t %>% 
-  # `colnames<-`(c("1,1", "2,1", "1,2", "2,2"))))
+  if(return.mpm == F){ 
+    return(df = df) 
+  } else {
+    return(list(df = df,
+                mats = sapply(mats, as.vector) %>% t %>%
+                  `colnames<-`(c("1,1", "2,1", "1,2", "2,2")))) 
+  }
+  
 }
 
 ## does the same as the function above, only uses the mpm_o function rather than the mpm function
 st.lamb_o <- function(mpm_df, env_surv, env_growth, env_reproduction, 
-                    clim_sd, clim_auto, sig.strength) {
+                      clim_sd, clim_auto, sig.strength, return.mpm = F) {
   
   n_it = length(env_surv)
   
@@ -196,9 +199,12 @@ st.lamb_o <- function(mpm_df, env_surv, env_growth, env_reproduction,
                                       clim_sd = clim_sd,
                                       clim_auto = clim_auto)
   
-  return(df = df) 
-  # if you want to also return the matrices:
-  # return(list(df = df,
-  #        mats = sapply(mats, as.vector) %>% t %>% 
-  # `colnames<-`(c("1,1", "2,1", "1,2", "2,2"))))
+  if(return.mpm == F){ 
+    return(df = df) 
+  } else {
+    return(list(df = df,
+                mats = sapply(mats, as.vector) %>% t %>%
+                  `colnames<-`(c("1,1", "2,1", "1,2", "2,2")))) 
+  }
+  
 }
