@@ -165,7 +165,8 @@ st.lamb <- function(mpm_df, env_surv, env_growth, env_reproduction,
   
   df <- mpm_df %>% tibble::add_column(lambda = popbio::stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
                                       clim_sd = clim_sd,
-                                      clim_auto = clim_auto)
+                                      clim_auto = clim_auto,
+                                      n_mats = nrow(mats))   ## Return for check that simulations produce right number of mats (i.e. not just mats with NaNs)
   
   if(return.mpm == F){ 
     return(df = df) 
@@ -197,7 +198,8 @@ st.lamb_o <- function(mpm_df, env_surv, env_growth, env_reproduction,
   
   df <- mpm_df %>% tibble::add_column(lambda = popbio::stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
                                       clim_sd = clim_sd,
-                                      clim_auto = clim_auto)
+                                      clim_auto = clim_auto,
+                                      n_mats = nrow(mats))
   
   if(return.mpm == F){ 
     return(df = df) 
