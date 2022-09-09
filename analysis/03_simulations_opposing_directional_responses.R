@@ -61,7 +61,7 @@ source("/gpfs0/home/evers/lagged_buffering/R/lambda_functions.R")
 ## for each combination of sd & autocorrelation value
 
 df_clim <- expand.grid(clim_sd = seq(from = 0.01, to = 2, length.out = 5),
-                       clim_auto =  c(-0.9,0,0.9),
+                       clim_auto =  c(-0.6,-0.3,-0.1,0,0.1,0.3,0.6),
                        rep = c(1:30))
 
 #### Create main temporal sequences
