@@ -55,11 +55,16 @@ single_row_lh_traits <- function(ii, vr_df) {
     add_column()
   
   mat <- create_mpm_from_vr(df)
-
+  matU <- mat
+  matU[1,2] <- 0
+  matR <- matrix(0,2,2)
+  matR[1,2] <- mat[1,2]
+  
+  
   df <- df %>% add_column(
-    gen.time = generation.time(mat),
     damp.ratio = damping.ratio(mat),
-    R0 = net.reproductive.rate(mat)
+    iteroparity = entropy_d(lx = mpm_to_lx(matU), mx = mpm_to_mx(matU, matR)),
+    life.expect = life_expect_mean(matU)
   ) 
   
   df <- do.call(data.frame, lapply(df,

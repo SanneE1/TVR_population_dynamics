@@ -1,7 +1,8 @@
 # Create dataframe for full range of lifehistories, according to Koons et al., 2016
 
 library(tidyverse)
-
+library(popbio)
+library(Rage)
 source("R/life_histories_functions.R")
 
 
@@ -35,6 +36,7 @@ df <- df_elas_per_vr(mat_df) %>%
     Sa_sd = tau_Sa * 0.5 * CVmax(Sa) * Sa,
     rho_sd = tau_rho * 0.5 * 1 * rho
   ) %>%
+  df_lh_traits %>%
   # select(-c(contains("elas"), contains("tau"))) %>%
   rowid_to_column(var = "lh_id")
 
