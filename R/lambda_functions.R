@@ -163,10 +163,14 @@ st.lamb <- function(mpm_df, env_surv, env_growth, env_reproduction,
   mats <- purrr::pmap(env, mpm) %>% Filter(Negate(anyNA), .)
   mats <- mats %>% purrr::discard(function(x) all(x == 0))
   
-  df <- mpm_df %>% tibble::add_column(lambda = popbio::stoch.growth.rate(mats, maxt = n_it, verbose = F)$sim,
+  lam_sim <- popbio::stoch.growth.rate(mats, maxt = length(mats), verbose = F)$sim
+  
+  df <- mpm_df %>% tibble::add_column(lambda = ifelse(!is.nan(lam_sim), lam_sim,
+                                                      popbio::stoch.growth.rate(mats, maxt = length(mats), verbose = F)$approx),
                                       clim_sd = clim_sd,
                                       clim_auto = clim_auto,
-                                      n_mats = nrow(mats))   ## Return for check that simulations produce right number of mats (i.e. not just mats with NaNs)
+                                      n_mats = nrow(mats),
+                                      lam_calc = ifelse(!is.nan(lam_sim), "sim", "approx"))   ## Return for check that simulations produce right number of mats (i.e. not just mats with NaNs)
   
   if(return.mpm == F){ 
     return(df = df) 
