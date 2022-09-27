@@ -1,105 +1,114 @@
 
 library(tidyverse)
 library(popbio)
+library(lme4)
 
 source("R/life_histories_functions.R")
 
-
-
-# big_same <- lapply(as.list(c(0.05,0.25,0.5,1)), function(x) {
-#   read.csv(file.path("results/01_Simulations_mpm_same_directions/", 
-#                      paste("life_histories_lambda_same_dir_", x, ".csv", sep = ""))) %>%
-#     mutate(sig.strength = x)
-# }
-# ) %>% bind_rows %>%
-#   df_lh_traits
+# # Combine all result files from the array jobs into one file
+# s0.05 <- lapply(list.files("/work/evers/simulate_lag-20986126/", full.names = T),
+#                 read.csv) %>% bind_rows() %>% mutate(sig.strength = 0.05, vr_cov = "positive")
+# s0.25 <- lapply(list.files("/work/evers/simulate_lag-20986273/", full.names = T),
+#                 read.csv) %>% bind_rows() %>% mutate(sig.strength = 0.25, vr_cov = "positive")
+# s0.5 <- lapply(list.files("/work/evers/simulate_lag-20986350/", full.names = T),
+#                read.csv) %>% bind_rows() %>% mutate(sig.strength = 0.5, vr_cov = "positive")
+# s1 <- lapply(list.files("/work/evers/simulate_lag-20986426/", full.names = T),
+#              read.csv) %>% bind_rows() %>% mutate(sig.strength = 1, vr_cov = "positive")
 # 
-# big_opp <- lapply(as.list(c(0.05,0.25,0.5,1)), function(x) {
-#   read.csv(file.path("results/02_Simulations_mpm_opposing_directions",
-#                      paste("life_histories_lambda_diff_dir_", x, ".csv", sep = ""))) %>%
-#     mutate(sig.strength = x)
-# }
-# ) %>% bind_rows %>%
-#   df_lh_traits
+# o0.05 <- lapply(list.files("/work/evers/simulate_oposing-20986717/", full.names = T),
+#                 read.csv) %>% bind_rows() %>% mutate(sig.strength = 0.05, vr_cov = "negative")
+# o0.25 <- lapply(list.files("/work/evers/simulate_oposing-20986794/", full.names = T),
+#                 read.csv) %>% bind_rows() %>% mutate(sig.strength = 0.25, vr_cov = "negative")
+# o0.5 <- lapply(list.files("/work/evers/simulate_oposing-20987011/", full.names = T),
+#                read.csv) %>% bind_rows() %>% mutate(sig.strength = 0.5, vr_cov = "negative")
+# o1 <- lapply(list.files("/work/evers/simulate_oposing-20987088/", full.names = T),
+#              read.csv) %>% bind_rows() %>% mutate(sig.strength = 1, vr_cov = "negative")
+# 
+# df <- rbind(s0.05, s0.25, s0.5, s1, o0.05, o0.25, o0.5, o1)
+# 
+# write.csv(df, file = "results/lambdas_life_histories.csv", row.names = F)
 
-big_same <- read.csv("results/01_Simulations_mpm_same_directions/life_histories_all.csv") %>%
-  mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")),
-         vr_cov = "positive") %>%
-  group_by(lh_id, clim_sd, auto_cat, sig.strength, lag_type) %>% 
+df <- read.csv("results/lambdas_life_histories.csv") %>%
+  left_join(., 
+            read.csv("results/life_histories_df.csv")) %>%
+  mutate(auto_cat = cut(clim_auto, breaks = 7, labels = c(-0.6, -0.3, -0.1, 0, 0.1, 0.3, 0.6)),
+         gen.time = scale(gen.time),
+         life.expect = scale(life.expect),
+         damp.ratio = scale(damp.ratio),
+         mature.age = scale(mature.age),
+         iteroparity = scale(iteroparity)) 
+
+
+
+# check that all simulations produced correct number of matrices
+if(any(df$n_mats != 10002)) warning("some sequences do not have the correct number of matrices")
+
+lamb_pos <- lmer(lambda ~ clim_sd + I(clim_sd^2) + clim_auto + sig.strength + 
+                   lag_type + lag_type:clim_sd + lag_type:clim_auto + lag_type:sig.strength + 
+            (I(clim_sd^2) - 1|lh_id), data = df %>% filter(vr_cov == "positive"))
+lamb_neg <- lmer(lambda ~ clim_sd + I(clim_sd^2) + clim_auto + sig.strength + 
+                   lag_type + lag_type:clim_sd + lag_type:clim_auto + lag_type:sig.strength +  
+                   (I(clim_sd^2) - 1|lh_id), data = df %>% filter(vr_cov == "negative"))
+
+summary(lamb_pos)$coefficients[,1:2]
+summary(lamb_neg)$coefficients[,1:2]
+
+saveRDS(object = data.frame(Estimate_pos = round(fixef(lamb_pos), 4), 
+                            Estimate_neg = round(fixef(lamb_neg), 4)), 
+        file = "results/table_lambda.rds")
+
+
+
+df1 <- df %>%
+  group_by(lh_id, clim_sd, auto_cat, sig.strength, lag_type, vr_cov) %>%
   mutate(rep = row_number()) %>%
   pivot_wider(names_from = lag_type, values_from = lambda) %>%
-  mutate(l_diff = Umatrix - none,
-         rel_dif = l_diff/abs(none))
+  rowwise() %>%
+  mutate(l_diff = Umatrix - none)
+
+mod_diff_pos <- lmer(l_diff ~ gen.time + life.expect + damp.ratio + mature.age + iteroparity +
+                 clim_sd + clim_auto + sig.strength + 
+                 clim_sd:clim_auto + (I(clim_sd^2) - 1|lh_id),
+               data = df1 %>% filter(vr_cov == "positive"))
+mod_diff_neg <- lmer(l_diff ~ gen.time + life.expect + damp.ratio + mature.age + iteroparity +
+                     clim_sd + clim_auto + sig.strength + 
+                     clim_sd:clim_auto + (I(clim_sd^2) - 1|lh_id),
+                   data = df1 %>% filter(vr_cov == "negative"))
+
+summary(mod_diff_pos)
+summary(mod_diff_neg)
 
 
-big_opp <- read.csv("results/02_Simulations_mpm_opposing_directions/life_histories_all.csv") %>%
-  mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c("-0.9", "0", "0.9")),
-         vr_cov = "negative") %>%
-  group_by(lh_id, clim_sd, auto_cat, sig.strength, lag_type) %>% 
-  mutate(rep = row_number()) %>%
-  pivot_wider(names_from = lag_type, values_from = lambda) %>%
-  mutate(l_diff = Umatrix - none,
-         rel_dif = l_diff/abs(none))
+saveRDS(object = data.frame(Estimate_pos = round(fixef(mod_diff_pos), 4), 
+                            Estimate_neg = round(fixef(mod_diff_neg), 4)), 
+        file = "results/table_diff.rds")
+  
 
-# anti_join(big_same %>% select(lh_id, clim_sd, auto_cat, sig.strength, rep),
-#           big_opp %>% select(lh_id, clim_sd, auto_cat, sig.strength, rep))
+df2 <- df1 %>% 
+  select(-c(l_diff, clim_auto)) %>% 
+  filter(clim_sd == 0.01 | clim_sd == 1) %>% 
+  group_by(lh_id, rep, auto_cat) %>% 
+  pivot_wider(names_from = "clim_sd", values_from = c("Umatrix", "none")) %>% 
+  mutate(rel_decrease = (Umatrix_1 - Umatrix_0.01)/(none_1 - none_0.01),
+         auto_cat = as.numeric(levels(auto_cat))[auto_cat])
 
-df <- rbind(big_same, big_opp) 
+rel_dec_pos <- lmer(log(rel_decrease) ~ life.expect + damp.ratio + iteroparity +
+                      auto_cat + sig.strength + 
+                      auto_cat:life.expect + auto_cat:damp.ratio + auto_cat:iteroparity +
+                      (1|lh_id), 
+                    data = df2 %>% filter(vr_cov == "positive"))
+rel_dec_neg <- lmer(log(rel_decrease) ~ gen.time + life.expect + damp.ratio +  mature.age + iteroparity +
+                      auto_cat + sig.strength + 
+                      (1|lh_id), 
+                    data = df2 %>% filter(vr_cov == "negative"))
 
-write.csv(df, "results/lambdas_life_histories.csv", row.names = F)
+summary(rel_dec_pos)
+summary(rel_dec_neg)
 
-df <- df %>%
-  mutate(auto = as.numeric(levels(auto_cat))[auto_cat],
-         elas_Sj = scale(elas_Sj), 
-         elas_Sa = scale(elas_Sa), 
-         elas_gamma = scale(elas_gamma))
-
-ggplot(df) + 
-  geom_point(aes(x = clim_sd, y = rel_dif, colour = auto_cat), position = position_dodge(width = 0.1)) +
-  facet_grid(rows = vars(vr_cov))
-
-
-
-mod_diff <- lm(l_diff ~ gen.time + damp.ratio + 
-                 elas_Sj + elas_Sa + elas_gamma + elas_rho +
-                 clim_sd + auto + sig.strength + vr_cov + 
-                 clim_sd:auto + clim_sd:vr_cov + auto:vr_cov,
-               data = df)
-summary(mod_diff)
-
-drop1(mod_diff, test = "Chisq") %>% 
-  rownames_to_column("dropped_covariate") %>%
-  rename(p_value = `Pr(>Chi)`) %>%
-  mutate(
-    p_adj_BH = p.adjust(p_value,method="BH",n=96),
-    p_adj_holm = p.adjust(p_value,method="holm",n=96),
-    include = ifelse(p_value < 0.05 & p_adj_BH < 0.05 & p_adj_holm < 0.05, "yes", "no")
-  ) %>% as_tibble()
+saveRDS(object = data.frame(Estimate_pos = round(fixef(rel_dec_pos), 4), 
+                            Estimate_neg = round(fixef(rel_dec_neg), 4)), 
+        file = "results/table_rel_decr.rds")
 
 
-mod_rell <- lm(rel_dif ~ gen.time + damp.ratio + 
-            elas_Sj + elas_Sa + elas_gamma + elas_rho +
-            clim_sd + auto + sig.strength + vr_cov + 
-              clim_sd:auto + clim_sd:vr_cov + auto:vr_cov,
-          data = df)
-summary(mod_rell)
-
-drop1(mod_rell, test = "Chisq") %>% 
-  rownames_to_column("dropped_covariate") %>%
-  rename(p_value = `Pr(>Chi)`) %>%
-  mutate(
-    p_adj_BH = p.adjust(p_value,method="BH",n=96),
-    p_adj_holm = p.adjust(p_value,method="holm",n=96),
-    include = ifelse(p_value < 0.05 & p_adj_BH < 0.05 & p_adj_holm < 0.05, "yes", "no")
-  ) %>% as_tibble()
-
-mod <- lm(l_diff ~ clim_sd + auto + sig.strength + vr_cov +
-            clim_sd:auto + clim_sd:vr_cov + auto:vr_cov +
-            clim_sd:auto:vr_cov,
-          data = df)
-summary(mod)
-
-mod <- lm(l_diff ~ clim_sd*auto*sig.strength*vr_cov,
-          data = df)
 
 
