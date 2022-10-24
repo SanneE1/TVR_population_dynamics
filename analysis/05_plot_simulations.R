@@ -218,7 +218,7 @@ for(j in c("positive", "negative")){
                                  labeller = labeller(sig.strength = ~ paste("sig.strength:", .),
                                                      lh_id = ~ paste("life history id: ", .)),
                                  nrow = 4, ncol = 3, scales = "free", page = i),
-           width = 190, height = 277, units = "mm"
+           width = 190, height = 277, units = "mm", dpi = 200,
     )
     
   }
