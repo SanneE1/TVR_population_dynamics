@@ -1,2 +1,2 @@
 # Buffering through timing
-Code for _"Buffering through timing: immediate and delayed responses to climate buffers effect of environmental variability"_ by Evers, Knight & Compagnoni, _in prep_
+Code for _"A combination of immediate and lagged responses to autocorrelated climate can benefit or hinder the long-term growth rate of populations"_ by Evers, Knight & Compagnoni, _in prep_
