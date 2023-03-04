@@ -144,7 +144,7 @@ lag_df <- rbind(lag_p_Sj, lag_n2_Sj, lag_p_Sa, lag_n2_Sa, lag_p_rho, lag_n2_rho,
 write.csv(lag_df, file.path("results", "lhID_60_diff_lifestage_resp_lambda_vs_climsd.csv"), 
           row.names = F)
 
-# lag_df <- read.csv(file.path("results", "lhID_60_diff_windows_lambda_vs_climsd.csv"))
+# lag_df <- read.csv(file.path("results", "lhID_60_diff_lifestage_resp_lambda_vs_climsd.csv"))
 
 df <- lag_df %>% 
   mutate(auto_cat = cut(clim_auto, breaks = 3, labels = c(-0.6, 0, 0.6))) 
@@ -153,7 +153,7 @@ plot <- ggplot(df) +
   geom_smooth(aes(x = clim_sd, y = lambda, colour = as.factor(lag_type), linetype = auto_cat), se = F) +
   scale_colour_manual(name = "Simulation type",
                       values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
-                      labels = c("none" = "control", "Umatrix" = "MCD")) +
+                      labels = c("none" = "control", "Umatrix" = "TVR")) +
   scale_linetype(name = "Autocorrelation") +
   ylab("stochastic log lambda") + xlab(~ paste(sigma[c], " of environmental sequence")) +
   theme_minimal() +

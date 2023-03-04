@@ -7,14 +7,14 @@ library(popbio)
 library(patchwork)
 library(ggforce)
 library(ggrepel)
-
+library(grid)
 
 source("R/plot_functions.R")
 source("R/lambda_functions.R")
 
 ##  -------------------------------------
 ##  Plot a lambda time sequence of simulation with i = 0.5 (50% of temporal variance explained by climate driver)
-##  Figure 1
+##  Figure 2
 ##  -------------------------------------
 set.seed(2)
 
@@ -182,7 +182,7 @@ dev.off()
 
 
 # --------------------------------------------
-# Plot simulation lambda's (Figure 2 and appendix)
+# Plot simulation lambda's (Figure 3 and appendix)
 # --------------------------------------------
 
 df <- read.csv("results/lambdas_life_histories.csv") %>%
@@ -205,7 +205,7 @@ for(j in c("positive", "negative")){
                         labels = c("none" = "control", "Umatrix" = "TVR")) +
     scale_shape(name = "Autocorrelation") +
     scale_linetype(name = "Autocorrelation") +
-    ylab("stochastic log lambda") + xlab(~ paste(sigma[c], " of environmental sequence")) +
+    ylab("stochastic log lambda") + xlab(~ paste(sigma[V], " of environmental sequence")) +
     theme(legend.position = "bottom")
   
   
@@ -231,16 +231,13 @@ ggsave(plot = plot_one, filename = file.path("results", "lh_id_60_lambda_vs_clim
 
 ## --------------------------------------------
 ## Plot simulation lambda's for different ends of the life history traits 
-## (Figure 3)
+## (Supplement)
 ## --------------------------------------------
 
 lh_df <- read.csv("results/life_histories_df.csv")
 
-# ggplot(lh_df, aes(x = log(life.expect), y = iteroparity, label = lh_id)) +
-#   geom_point() + geom_text(hjust=0, vjust=0)
-
-# Graphical representation of the lifehistory traits chosen for the next graphs ## --------------------------------------------
-ggplot(lh_df, aes(x = log(life.expect), y = iteroparity, label = lh_id)) + 
+### Graphical representation of the lifehistory traits chosen for the next graphs
+lh_plot <- ggplot(lh_df, aes(x = log(life.expect), y = iteroparity, label = lh_id)) + 
   geom_point() + 
   geom_text_repel(data = subset(lh_df, lh_id %in% c(60,
                                                     144, 92)),
@@ -258,7 +255,8 @@ ggplot(lh_df, aes(x = log(life.expect), y = iteroparity, label = lh_id)) +
   viridis::scale_colour_viridis() + 
   theme_minimal() + theme(legend.position = "bottom")
 
-ggsave("results/life_history_trait_distribution.png")
+ggsave("results/life_history_trait_distribution.png", lh_plot,
+       width = 5, height = 3)
 
 ## graph to compare simulation results for different trait "extremes"
 L_low <- plot_one_function(id = 92) + ylab("stochastic log lambda")+ xlab(~ paste(sigma[c], " of environmental sequence"))
@@ -268,12 +266,191 @@ S_low <- plot_one_function(id = 111) + xlab(~ paste(sigma[c], " of environmental
 S_high <- plot_one_function(id = 44)
 
 
-lifehist_plot <- L_high + S_high +  
-  L_low + S_low + 
-  plot_layout(nrow = 2,guides = "collect") & theme( legend.direction = "vertical")
+lifehist_plot <- plot_spacer() + wrap_elements(textGrob("Life Expectancy", gp = gpar(fontsize = 16))) + wrap_elements(textGrob("Degree of iteroparity", gp = gpar(fontsize = 16))) +
+  wrap_elements(textGrob("High", rot = 90, gp = gpar(fontsize = 16))) + L_high + S_high +  
+  wrap_elements(textGrob("low", rot = 90, gp = gpar(fontsize = 16))) + L_low + S_low +  
+  plot_layout(nrow = 3, guides = "collect", 
+              widths = c(1,9,9),
+              heights = c(2,9,9)) & theme( legend.direction = "vertical")
 
 
-ggsave(lifehist_plot, filename = "results/lifehistory_comparison_plot.tiff",
-       width = 7.5, height = 6)
+ggsave(lifehist_plot, filename = "results/lifehistory_comparison_plot.png",
+       width = 8, height = 6)
 
 
+### ---------------------------------------------------------------------------------------------
+### Heat map predictions life history space
+### Figure 5
+### ---------------------------------------------------------------------------------------------
+
+rel_dec <- readRDS("results/models_rel_decr.rds")
+rel_dec_pos <- rel_dec[[1]]
+rel_dec_neg <- rel_dec[[2]]
+
+
+lh_df <- read.csv("results/life_histories_df.csv") %>% 
+  mutate(life.expect_s = scale(log(life.expect)),
+         iteroparity_s = scale(iteroparity))
+
+
+new_df <- expand.grid(life.expect_real = seq(from = min(log(lh_df$life.expect)), to = max(log(lh_df$life.expect)), length.out = 20),
+                      iteroparity_real = seq(from = min(lh_df$iteroparity), to = max(lh_df$iteroparity), length.out = 20),
+                      auto_cat = c(-0.6,0,0.6),
+                      sig.strength = 0.5,
+                      lh_id = 1) %>%
+  mutate(life.expect = (life.expect_real - attr(lh_df$life.expect_s, 'scaled:center'))/ attr(lh_df$life.expect_s, 'scaled:scale'),
+         iteroparity = (iteroparity_real - attr(lh_df$iteroparity_s, 'scaled:center'))/ attr(lh_df$iteroparity_s, 'scaled:scale'))
+
+
+### 
+new_df$Positive <- predict(rel_dec_pos, newdata = new_df, re.form = NA)
+new_df$Negative <- predict(rel_dec_neg, newdata = new_df, re.form = NA)
+
+new_df <- pivot_longer(new_df, cols = c("Positive", "Negative"), names_to = "vr_cor", values_to = "rel_diff")
+new_df$vr_cor <- factor(new_df$vr_cor, levels = c("Positive", "Negative"))
+
+heat <- ggplot(new_df) + 
+  geom_tile(aes(x = life.expect_real, y = iteroparity_real, fill = rel_diff)) +
+  geom_contour(aes(x = life.expect_real, y = iteroparity_real, z = rel_diff),
+               binwidth = 0.5, colour = "white") +
+  metR::geom_text_contour(aes(x = life.expect_real, y = iteroparity_real, z = rel_diff),
+                          binwidth = 0.5, rotate = F) +
+  geom_point(data = lh_df, 
+             aes(x = log(life.expect), y = iteroparity), alpha = 0.2) +
+  facet_grid(rows = vars(vr_cor), cols = vars(auto_cat)) +
+  scale_fill_gradient2(low = "#0072B2",
+                       mid = "#999999",
+                       high = "#E69F00",
+                       midpoint = 0, name = "Relative \ndifference",
+                       limits = c(-2, 2),
+                       oob = scales::squish) +
+  scale_y_continuous(sec.axis = sec_axis(~ . , name = "Vital rate correlation", breaks = NULL, labels = NULL)) +
+  scale_x_continuous(sec.axis = sec_axis(~ . , name = "Climate autocorrelation levels", breaks = NULL, labels = NULL)) +
+  ylab("Degree of iteroparity") + xlab("Ln(Life expectancy)") +
+  theme_bw() + 
+  theme(panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_line(colour = "grey20"),
+        axis.text = element_text(size = 12),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        strip.text = element_text(size = 12))
+
+heat
+
+ggsave(plot = heat, filename = "results/lh_heatmap.png",
+       width = 8, height = 6, dpi = 400)
+
+
+### ---------------------------------------------------------------------------------------------
+### Plot model coefficients (Figures 4 and 6)
+### ---------------------------------------------------------------------------------------------
+
+tb1 <- readRDS("results/models_lambda.rds")
+tb2 <- readRDS("results/models_rel_decr.rds")
+
+# a <- confint(tb1[[1]])
+# b <- confint(tb1[[2]])
+# c <- confint(tb2[[1]])
+# d <- confint(tb2[[2]])
+# 
+# saveRDS(list(a = a, b = b, c = c, d = d), "results/model_confint.rds")
+
+confint <- readRDS("results/model_confint.rds")
+a <- confint$a
+b <- confint$b
+c <- confint$c
+d <- confint$d
+
+
+df_pos <- as.data.frame(a) %>% rownames_to_column(var = "cf")
+df_pos$type <- "positive"
+df_pos$mean <- (df_pos$`2.5 %` + df_pos$`97.5 %`)/2
+
+df_neg <- as.data.frame(b) %>% rownames_to_column(var = "cf")
+df_neg$type <- "negative"
+df_neg$mean <- (df_neg$`2.5 %` + df_neg$`97.5 %`)/2
+
+df_coef <- rbind(df_pos, df_neg) %>% filter(!(cf %in% c(".sig01", ".sigma"))) %>%
+  mutate(cf_f = factor(cf, levels = c("(Intercept)", "clim_sd", "I(clim_sd^2)", "clim_auto",
+                                      "sig.strength", "lag_typeUmatrix", "clim_sd:lag_typeUmatrix", 
+                                      "clim_auto:lag_typeUmatrix", "sig.strength:lag_typeUmatrix")
+  ),
+  type = factor(type, levels = c("positive", "negative")))
+
+full_labels <- rev(expression("Intercept", "Climate std"~(sigma[c]), "Climate std"~(sigma[c]^2),
+                          "Climate autocorrelation"~(r[K]), "Climate signal strength (p)",
+                          "TVR simulation type", "TVR - "~sigma[c]~" interaction",
+                          "TVR - "~r[K]~" interaction", "TVR - p interaction"))
+select_labels <- rev(expression("Climate autocorrelation"~(r[K]), "Climate signal strength (p)",
+                            "TVR simulation type", "TVR - "~sigma[c]~" interaction",
+                            "TVR - "~r[K]~" interaction", "TVR - p interaction"))
+
+
+
+coef_plot_full <- ggplot(df_coef) +
+  geom_vline(aes(xintercept = 0)) +
+  geom_pointrange(aes(x = mean, xmin = `2.5 %`, xmax = `97.5 %`, y = cf_f, colour = type), 
+                  position = ggstance::position_dodgev(height = 0.5)) +
+  scale_y_discrete(labels = full_labels,
+                   limits = rev) +
+  scale_colour_manual(values = c("positive" = "#000000","negative" = "#D55E00"),
+                      name = "Vital rate \ncorrelation") +
+  xlab(expression("Estimated effect on"~ln(lambda[s]))) +
+  theme_minimal() +
+  theme(axis.title.y = element_blank())
+
+
+coef_plot <- ggplot(df_coef %>% filter(!(cf %in% c("(Intercept)", "clim_sd", "I(clim_sd^2)")))) +
+  geom_vline(aes(xintercept = 0)) +
+  geom_pointrange(aes(x = mean, xmin = `2.5 %`, xmax = `97.5 %`, y = cf_f, colour = type), 
+                  position = ggstance::position_dodgev(height = 0.5)) +
+  scale_y_discrete(labels = select_labels,
+                   limits = rev) +
+  scale_colour_manual(values = c("positive" = "#000000","negative" = "#D55E00"),
+                      name = "Vital rate \ncorrelation") +
+  xlab(expression("Estimated effect on"~ln(lambda[s]))) +
+  theme_minimal() +
+  theme(axis.title.y = element_blank(),
+        axis.text.x = element_text(hjust = 0.95))
+
+ggsave("results/model_lambda_plot.png", plot = coef_plot_full, width = 7, height = 4)
+ggsave("results/model_lambda_plot_selected.png", plot = coef_plot, width = 7, height = 3.5, )
+
+
+
+
+df_pos <- as.data.frame(c) %>% rownames_to_column(var = "cf")
+df_pos$type <- "positive"
+df_pos$mean <- (df_pos$`2.5 %` + df_pos$`97.5 %`)/2
+
+df_neg <- as.data.frame(d) %>% rownames_to_column(var = "cf")
+df_neg$type <- "negative"
+df_neg$mean <- (df_neg$`2.5 %` + df_neg$`97.5 %`)/2
+
+df_coef2 <- rbind(df_pos, df_neg) %>% filter(!(cf %in% c(".sig01", ".sigma"))) %>%
+  mutate(cf_f = factor(cf, levels = c("(Intercept)", "life.expect", "iteroparity",
+                                      "auto_cat", "sig.strength", "life.expect:auto_cat", "iteroparity:auto_cat")
+  ),
+  type = factor(type, levels = c("positive", "negative")))
+
+full_labels2 <- rev(expression("Intercept", "ln(life expectancy)", "Degree of iteroparity",
+                              "Climate autocorrelation"~(r[K]), "Climate signal strength (p)",
+                              r[K]~": ln(life expectancy) interaction", r[K]~": Iteroparity interaction"
+                              ))
+
+
+coef_plot_diff <- ggplot(df_coef2) +
+  geom_vline(aes(xintercept = 0)) +
+  geom_pointrange(aes(x = mean, xmin = `2.5 %`, xmax = `97.5 %`, y = cf_f, colour = type), 
+                  position = ggstance::position_dodgev(height = 0.5)) +
+  scale_y_discrete(labels = full_labels2,
+                   limits = rev) +
+  scale_colour_manual(values = c("positive" = "#000000","negative" = "#D55E00"),
+                      name = "Vital rate \ncorrelation") +
+  xlab(expression("Estimated effect on ln(relative difference in"~lambda[s]~")" )) +
+  theme_minimal() +
+  theme(axis.title.y = element_blank())
+
+
+ggsave("results/model_rel_diff.png", plot = coef_plot_diff, width = 7, height = 4)

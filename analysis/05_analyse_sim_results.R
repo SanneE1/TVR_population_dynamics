@@ -50,6 +50,9 @@ lamb_neg <- lmer(lambda ~ clim_sd + I(clim_sd^2) + clim_auto + sig.strength +
 summary(lamb_pos)
 summary(lamb_neg)
 
+saveRDS(object = list(lamb_pos, lamb_neg), 
+        file = "results/models_lambda.rds")
+
 saveRDS(object = data.frame(Estimate_pos = round(fixef(lamb_pos), 4), 
                             Estimate_neg = round(fixef(lamb_neg), 4)), 
         file = "results/table_lambda.rds")
@@ -66,8 +69,7 @@ df2 <- df1 %>%
   filter(clim_sd == 0.01 | clim_sd == 1) %>% 
   group_by(lh_id, rep, auto_cat) %>% 
   pivot_wider(names_from = "clim_sd", values_from = c("Umatrix", "none")) %>% 
-  mutate(rel_decrease = (Umatrix_1 - Umatrix_0.01)/(none_1 - none_0.01),
-         rel_diff = none_1 - none_0.01,
+  mutate(rel_decrease = (none_1 - none_0.01)/(Umatrix_1 - Umatrix_0.01),
          auto_cat = as.numeric(levels(auto_cat))[auto_cat])
 
 
@@ -85,42 +87,11 @@ rel_dec_neg <- lmer(log(rel_decrease) ~ life.expect + iteroparity +
 summary(rel_dec_pos)
 summary(rel_dec_neg)
 
+saveRDS(object = list(rel_dec_pos, rel_dec_neg), 
+        file = "results/models_rel_decr.rds")
+
+
 saveRDS(object = data.frame(Estimate_pos = round(fixef(rel_dec_pos), 4), 
                             Estimate_neg = round(fixef(rel_dec_neg), 4)), 
         file = "results/table_rel_decr.rds")
-
-# 
-# df3 <- df1 %>%
-#   filter(clim_sd == 1) %>%
-#   rowwise() %>%
-#   mutate(diff = (abs(none) - abs(Umatrix))/abs(none),
-#          auto_cat = as.numeric(levels(auto_cat))[auto_cat])
-# 
-# lower_bound_pos <- quantile(df3$diff[which(df3$vr_cov == "positive")], 0.01, na.rm = T)
-# upper_bound_pos <- quantile(df3$diff[which(df3$vr_cov == "positive")], 0.99, na.rm = T)
-# incl_id_pos <- which(!(df3$diff[which(df3$vr_cov == "positive")] < lower_bound_pos | df3$diff[which(df3$vr_cov == "negative")] > upper_bound_pos))
-# 
-# lower_bound_neg <- quantile(df3$diff[which(df3$vr_cov == "negative")], 0.01, na.rm = T)
-# upper_bound_neg <- quantile(df3$diff[which(df3$vr_cov == "negative")], 0.99, na.rm = T)
-# incl_id_neg <- which(!(df3$diff[which(df3$vr_cov == "negative")] < lower_bound_neg | df3$diff[which(df3$vr_cov == "negative")] > upper_bound_neg))
-# 
-# 
-# diff_pos <- lmer(log(diff) ~ life.expect + iteroparity +
-#                       auto_cat + sig.strength + 
-#                       auto_cat:life.expect + auto_cat:iteroparity +
-#                       (1|lh_id), 
-#                     data = df3[incl_id_pos,])
-# diff_neg <- lmer(diff ~ life.expect + iteroparity +
-#                    auto_cat + sig.strength + 
-#                    auto_cat:life.expect + auto_cat:iteroparity +
-#                    (1|lh_id), 
-#                  data = df3[incl_id_neg,])
-# 
-# summary(diff_pos)
-# summary(diff_neg)
-# 
-# saveRDS(object = data.frame(Estimate_pos = round(fixef(diff_pos), 4),
-#                             Estimate_neg = round(fixef(diff_neg), 4)),
-#         file = "results/table_diff.rds")
-
 
