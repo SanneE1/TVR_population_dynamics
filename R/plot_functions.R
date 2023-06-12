@@ -9,8 +9,9 @@ plot_w_vrcov_function <- function(id) {
     scale_colour_manual(name = "Simulation type",
                         values = c("Umatrix" = "#E69F00", "none" = "#0072B2"),
                         labels = c("none" = "control", "Umatrix" = "TVR")) +
-    scale_linetype(name = "Autocorrelation") +
-    ylab("stochastic log lambda") + xlab(~ paste(sigma[c], " of environmental sequence")) +
+    scale_linetype(name = "Autocorrelation",
+                   guide = guide_legend(override.aes = list(colour = "black"))) +
+    ylab("stochastic log lambda") + xlab(~ paste(sigma[V], " of environmental sequence")) +
     theme_minimal() +
     theme(legend.position = "bottom",
           legend.box = "vertical",
